@@ -197,7 +197,6 @@ class JSONArray:JSONType {
 		// rip off the leading [
 		source = stripl(source[1..$]);
 		while (source[0] != ']') {
-			source = stripl(source[1..$]);
 			_children ~= parseHelper(source);
 			source = stripl(source);
 			// handle end cases
@@ -247,6 +246,7 @@ class JSONString:JSONType {
 			}
 			// we have reached the terminating case! huzzah!
 			sliceloc = i;
+			break;
 		}
 		// take care of failure to find the end of the string
 		if (sliceloc == -1) throw new JSONError("Unable to find the end of the JSON string starting here: "~source);
@@ -440,6 +440,7 @@ unittest {
 	string jstr = root.toString;
 	std.stdio.writefln("Generated JSON string: %s",jstr);
 	std.stdio.writefln("Regenerated JSON string: %s",readJSON(jstr).toString);
+	assert(jstr == readJSON(jstr).toString);
 }
 
 version(JSON_main) {
