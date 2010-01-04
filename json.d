@@ -35,7 +35,7 @@ module libdjson.json;
 version(Tango) {
 	import tango.text.Util:isspace=isSpace,stripl=triml,strip=trim,stripr=trimr,find=locatePattern,split,replace=substitute;
 	import tango.text.convert.Integer:tostring=toString,atoi=toInt;
-	import tango.text.convert.Float:tostring=toString;
+	import tango.text.convert.Float:tostring=toString,atof=toFloat;
 	import tango.text.Ascii:icmp=icompare,cmp=compare;
 	import tango.io.Stdout:writef=Stdout;
 	import tango.text.Regex;
@@ -50,9 +50,9 @@ version(Tango) {
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi;
+		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi,atof;
 	} else {
-		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi;
+		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi,atof;
 	}
 	import std.stdio;
 	import std.ctype:isspace;
@@ -216,6 +216,7 @@ class JSONArray:JSONType {
 /// JSONString represents a JSON string.  Internal representation is escaped for faster parsing and JSON generation.
 class JSONString:JSONType {
 	this(){}
+	this(string data) {_data = data;}
 	protected string _data;
 	void set(string data) {_data = JSONEncode(data);}
 	string get() {return JSONDecode(_data);}
@@ -258,6 +259,7 @@ class JSONString:JSONType {
 /// JSONBoolean represents a JSON boolean value.
 class JSONBoolean:JSONType {
 	this(){}
+	this(bool data) {_data = data;}
 	void set(bool data) {_data = data;}
 	bool get() {return _data;}
 	protected bool _data;
@@ -291,6 +293,7 @@ class JSONNull:JSONType {
 /// JSONNumber represents any JSON numeric value.
 class JSONNumber:JSONType {
 	this(){}
+	this(real data) {_data = data;}
 	void set(real data) {_data = data;}
 	real get() {return _data;}
 	protected real _data;
@@ -299,7 +302,29 @@ class JSONNumber:JSONType {
 	}
 	/// This function parses a JSONNumber out of a string
 	void parse(ref string source) {
-		// this parser is going to suck...
+		// this parser sucks...
+		int i = 0;
+		// check for leading minus sign
+		if (source[i] == '-') i++;
+		// sift through whole numerics
+		if (source[i] == '0') {
+			i++;
+		} else if (source[i] <= '9' && source[i] >= '1') {
+			while (source[i] >= '0' && source[i] <= '9') i++;
+		} else throw new JSONError("A numeric parse error occurred while parsing the numeric beginning at: "~source);
+		// if the next char is not a '.', we know we're done with fractional parts 
+		if (source[i] == '.') {
+			i++;
+			while (source[i] >= '0' && source[i] <= '9') i++;
+		}
+		// if the next char is e or E, we're poking at an exponential
+		if (source[i] == 'e' || source[i] == 'E') {
+			i++;
+			if (source[i] == '-' || source[i] == '+') i++;
+			while (source[i] >= '0' && source[i] <= '9') i++;
+		}
+		_data = atof(source[0..i]);
+		source = stripl(source[i..$]);
 	}
 }
 
@@ -406,5 +431,14 @@ private dchar toHVal(char digit) {
 }
 
 unittest {
+	auto root = new JSONObject();
+	auto arr = new JSONArray();
+	arr ~= new JSONString("da blue teeths!\"\\");
+	root["what is that on your ear?"] = arr;
+	root["my pants"] = new JSONString("are on fire");
+	root["i am this many"] = new JSONNumber(10.253);
+	string jstr = root.toString;
+	std.stdio.writefln("Generated JSON string: %s",jstr);
+	std.stdio.writefln("Regenerated JSON string: %s",readJSON(jstr).toString);
 }
 
