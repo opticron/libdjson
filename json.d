@@ -133,7 +133,7 @@ class JSONObject:JSONType {
 		string ret;
 		ret ~= "{";
 		foreach (key,val;_children) {
-			ret ~= key~":"~val.toString~",";
+			ret ~= "\""~JSONEncode(key)~"\":"~val.toString~",";
 		}
 		// rip off the trailing comma, we don't need it
 		if (ret.length > 1) ret = ret[0..$-1];
@@ -216,12 +216,12 @@ class JSONArray:JSONType {
 /// JSONString represents a JSON string.  Internal representation is escaped for faster parsing and JSON generation.
 class JSONString:JSONType {
 	this(){}
-	this(string data) {_data = data;}
+	this(string data) {set(data);}
 	protected string _data;
 	void set(string data) {_data = JSONEncode(data);}
 	string get() {return JSONDecode(_data);}
 	string toString() {
-		return _data;
+		return "\""~_data~"\"";
 	}
 	/// This function parses a JSONArray out of a string
 	void parse(ref string source) in { assert(source[0] == '"'); } body {
@@ -442,3 +442,6 @@ unittest {
 	std.stdio.writefln("Regenerated JSON string: %s",readJSON(jstr).toString);
 }
 
+version(JSON_main) {
+	void main(){}
+}
