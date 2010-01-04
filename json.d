@@ -68,16 +68,18 @@ version(Tango) {
 
 /**
  * Read an entire string into a JSON tree.
- * This defaults to stripping all whitespace for a speed gain (less objects created), but can be forced to preserve whitespace using the second parameter.
  * Example:
  * --------------------------------
- * string jsonstring = "{\"firstName\": \"John\",\"lastName\": \"Smith\",\"address\": {\"streetAddress\": \"21 2nd Street\",\"city\": \"New York\",\"state\": \"NY\",\"postalCode\": 10021},\"phoneNumbers\": [{ \"type\": \"home\", \"number\": \"212 555-1234\" },{ \"type\": \"fax\", \"number\": \"646 555-4567\" }],\"newSubscription\": false,\"companyName\": null }";
- * auto jnode = jsonstring.readJSON();
- * xmlstring = jnode.toString;
- * // ensure that the string doesn't mutate after a second reading, it shouldn't
- * debug(json)writef("libdjson.json unit test\n");
- * assert(jsonstring.readJSON().toString == jsonstring);
- * 
+ * auto root = new JSONObject();
+ * auto arr = new JSONArray();
+ * arr ~= new JSONString("da blue teeths!\"\\");
+ * root["what is that on your ear?"] = arr;
+ * root["my pants"] = new JSONString("are on fire");
+ * root["i am this many"] = new JSONNumber(10.253);
+ * string jstr = root.toString;
+ * writef("Unit Test libDJSON JSON creation...\n");
+ * writef("Generated JSON string: ");writef(jstr);writef("\n");
+ * writef("Regenerated JSON string: ");writef(readJSON(jstr).toString);writef("\n");
  * --------------------------------
  * Returns: A JSONObject with no name that is the root of the document that was read.
  * Throws: JSONError on any parsing errors.
@@ -438,9 +440,17 @@ unittest {
 	root["my pants"] = new JSONString("are on fire");
 	root["i am this many"] = new JSONNumber(10.253);
 	string jstr = root.toString;
-	std.stdio.writefln("Generated JSON string: %s",jstr);
-	std.stdio.writefln("Regenerated JSON string: %s",readJSON(jstr).toString);
+	writef("Unit Test libDJSON JSON creation...\n");
+	writef("Generated JSON string: ");writef(jstr);writef("\n");
+	writef("Regenerated JSON string: ");writef(readJSON(jstr).toString);writef("\n");
 	assert(jstr == readJSON(jstr).toString);
+	writef("Unit Test libDJSON JSON parsing...\n");
+	jstr = "{\"firstName\": \"John\",\"lastName\": \"Smith\",\"address\": {\"streetAddress\": \"21 2nd Street\",\"city\": \"New York\",\"state\": \"NY\",\"postalCode\": 10021},\"phoneNumbers\": [{ \"type\": \"home\", \"number\": \"212 555-1234\" },{ \"type\": \"fax\", \"number\": \"646 555-4567\" }],\"newSubscription\": false,\"companyName\": null }";
+	writef("Sample JSON string: ");writef(jstr);writef("\n");
+	jstr = jstr.readJSON().toString;
+	writef("Parsed JSON string: ");writef(jstr);writef("\n");
+	// ensure that the string doesn't mutate after a second reading, it shouldn't
+	assert(jstr.readJSON().toString == jstr);
 }
 
 version(JSON_main) {
