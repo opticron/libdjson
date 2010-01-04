@@ -115,22 +115,38 @@ interface JSONType {
  * adding children.  All methods that make changes modify this
  * JSONObject rather than making a copy, unless otherwise noted.  Many methods
  * return a self reference to allow cascaded calls.
- * Example:
- * --------------------------------
- * // Create a JSON tree, and write it to a file.
- * /// XXX this needs an example
- * --------------------------------*/
+ */
 class JSONObject:JSONType {
-	// XXX this needs opApply for foreach
 	this(){}
 	protected JSONType[string] _children;
+	/// Operator overload for setting keys in the AA.
 	void opIndexAssign(JSONType type,string key) {
 		_children[key] = type;
 	}
+	/// Operator overload for accessing values already in the AA.
 	JSONType opIndex(string key) {
 		return _children[key];
 	}
+	/// Allow the user to get the number of elements in this object
 	int length() {return _children.length;}
+	/// Operator overload for foreach iteration through the object with values only
+	int opApply(int delegate(JSONType) dg) {
+		int res;
+		foreach(child;_children) {
+			res = dg(child);
+			if (res) return res;
+		}
+		return 0;
+	}
+	/// Operator overload for foreach iteration through the object with key and value
+	int opApply(int delegate(string,JSONType) dg) {
+		int res;
+		foreach(key,child;_children) {
+			res = dg(key,child);
+			if (res) return res;
+		}
+		return 0;
+	}
 	string toString() {
 		string ret;
 		ret ~= "{";
@@ -142,6 +158,7 @@ class JSONObject:JSONType {
 		ret ~= "}";
 		return ret;
 	}
+
 	/// This function parses a JSONObject out of a string
 	void parse(ref string source) in { assert(source[0] == '{'); } body {
 		// only put the incoming check in the in, because it should have already been checked if we're this far
@@ -172,16 +189,36 @@ class JSONObject:JSONType {
 
 /// JSONArray represents a single JSON array, capable of being heterogenous
 class JSONArray:JSONType {
-	// XXX this needs opApply for foreach
 	this(){}
 	protected JSONType[] _children;
+	/// Operator overload to allow addition of children
 	void opCatAssign(JSONType child) {
 		_children ~= child;
 	}
+	/// Operator overload to allow access of children
 	JSONType opIndex(int key) {
 		return _children[key];
 	}
+	/// Allow the user to get the number of elements in this object
 	int length() {return _children.length;}
+	/// Operator overload for foreach iteration through the array with values only
+	int opApply(int delegate(JSONType) dg) {
+		int res;
+		foreach(child;_children) {
+			res = dg(child);
+			if (res) return res;
+		}
+		return 0;
+	}
+	/// Operator overload for foreach iteration through the array with key and value
+	int opApply(int delegate(int,JSONType) dg) {
+		int res;
+		foreach(key,child;_children) {
+			res = dg(key,child);
+			if (res) return res;
+		}
+		return 0;
+	}
 	string toString() {
 		string ret;
 		ret ~= "[";
@@ -281,7 +318,6 @@ class JSONBoolean:JSONType {
 
 /// JSONNull represents a JSON null value.
 class JSONNull:JSONType {
-	// XXX should this have a getter and a setter at all?
 	this(){}
 	string toString() {
 		return "null";
