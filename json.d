@@ -138,10 +138,28 @@ class JSONObject:JSONType {
 		}
 		return 0;
 	}
+	/// Operator overload for foreach iteration through the object with values only and allow modification of the reference
+	int opApply(int delegate(ref JSONType) dg) {
+		int res;
+		foreach(ref child;_children) {
+			res = dg(child);
+			if (res) return res;
+		}
+		return 0;
+	}
 	/// Operator overload for foreach iteration through the object with key and value
 	int opApply(int delegate(string,JSONType) dg) {
 		int res;
 		foreach(key,child;_children) {
+			res = dg(key,child);
+			if (res) return res;
+		}
+		return 0;
+	}
+	/// Operator overload for foreach iteration through the object with key and value and allow modification of the reference
+	int opApply(int delegate(string,ref JSONType) dg) {
+		int res;
+		foreach(key,ref child;_children) {
 			res = dg(key,child);
 			if (res) return res;
 		}
@@ -210,10 +228,28 @@ class JSONArray:JSONType {
 		}
 		return 0;
 	}
+	/// Operator overload for foreach iteration through the array with values only and allow modification of the reference
+	int opApply(int delegate(ref JSONType) dg) {
+		int res;
+		foreach(ref child;_children) {
+			res = dg(child);
+			if (res) return res;
+		}
+		return 0;
+	}
 	/// Operator overload for foreach iteration through the array with key and value
 	int opApply(int delegate(int,JSONType) dg) {
 		int res;
 		foreach(key,child;_children) {
+			res = dg(key,child);
+			if (res) return res;
+		}
+		return 0;
+	}
+	/// Operator overload for foreach iteration through the array with key and value and allow modification of the reference
+	int opApply(int delegate(int,ref JSONType) dg) {
+		int res;
+		foreach(key,ref child;_children) {
 			res = dg(key,child);
 			if (res) return res;
 		}
