@@ -50,7 +50,13 @@ version(Tango) {
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi,atof;
+		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi;
+		real atof(string data) {
+			return to!(real)(data);
+		}
+		string tostring(real data) {
+			return to!(string)(data);
+		}
 	} else {
 		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi,atof;
 	}
