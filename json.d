@@ -125,7 +125,7 @@ class JSONObject:JSONType {
 	}
 	/// Operator overload for accessing values already in the AA.
 	JSONType opIndex(string key) {
-		return _children[key];
+		return (key in _children)?_children[key]:null;
 	}
 	/// Allow the user to get the number of elements in this object
 	int length() {return _children.length;}
@@ -523,6 +523,9 @@ unittest {
 	writef("Parsed JSON string: ");writef(jstr);writef("\n");
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
 	assert(jstr.readJSON().toString == jstr);
+	writef("Unit Test libDJSON JSON access...\n");
+	writef("Got first name:");writef((cast(JSONString)jstr.readJSON()["firstName"]).get);writef("\n");
+	writef("Got last name:");writef((cast(JSONString)jstr.readJSON()["lastName"]).get);writef("\n");
 }
 
 version(JSON_main) {
