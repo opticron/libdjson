@@ -31,6 +31,10 @@
  * Standards:	Attempts to conform to the subset of Javascript require to implement the JSON Specification
  */
 
+/* My TODO list:
+ *	implement a X to(X:JSONType)() template to make things easier to convert versus having casts EVERYWHERE
+ *	implement some kind of XPath like search ability
+ */
 module libdjson.json;
 version(Tango) {
 	import tango.text.Util:isspace=isSpace,stripl=triml,strip=trim,stripr=trimr,find=locatePattern,split,replace=substitute;
@@ -115,7 +119,28 @@ interface JSONType {
 	string toString();
 	/// The parse method of this interface should ALWAYS be destructive, removing things from the front of source as it parses.
 	void parse(ref string source);
+	/// Conversion convenience functions
+	JSONObject toJSONObject();
+	JSONArray toJSONArray();
+	JSONString toJSONString();
+	JSONBoolean toJSONBoolean();
+	JSONNumber toJSONNumber();
+	JSONNull toJSONNull();
 }
+const string convfuncs = 
+"
+/// Convenience function for casting to JSONObject
+JSONObject toJSONObject(){return cast(JSONObject)this;}
+/// Convenience function for casting to JSONArray
+JSONArray toJSONArray(){return cast(JSONArray)this;}
+/// Convenience function for casting to JSONString
+JSONString toJSONString(){return cast(JSONString)this;}
+/// Convenience function for casting to JSONBoolean
+JSONBoolean toJSONBoolean(){return cast(JSONBoolean)this;}
+/// Convenience function for casting to JSONNumber
+JSONNumber toJSONNumber(){return cast(JSONNumber)this;}
+/// Convenience function for casting to JSONNull
+JSONNull toJSONNull(){return cast(JSONNull)this;}";
 /**
  * JSONObject represents a single JSON object node and has methods for 
  * adding children.  All methods that make changes modify this
@@ -209,6 +234,7 @@ class JSONObject:JSONType {
 		// rip off the } and be done with it
 		source = stripl(source[1..$]);
 	}
+	mixin(convfuncs);
 }
 
 /// JSONArray represents a single JSON array, capable of being heterogenous
@@ -291,6 +317,7 @@ class JSONArray:JSONType {
 		// rip off the ] and be done with it
 		source = stripl(source[1..$]);
 	}
+	mixin(convfuncs);
 }
 
 /// JSONString represents a JSON string.  Internal representation is escaped for faster parsing and JSON generation.
@@ -335,6 +362,7 @@ class JSONString:JSONType {
 		// eat the " that is known to be there
 		source = stripl(source[sliceloc+1..$]);
 	}
+	mixin(convfuncs);
 }
 
 /// JSONBoolean represents a JSON boolean value.
@@ -356,6 +384,7 @@ class JSONBoolean:JSONType {
 			source = stripl(source[5..$]);
 		} else throw new JSONError("Could not parse JSON boolean variable from: "~source);
 	}
+	mixin(convfuncs);
 }
 
 /// JSONNull represents a JSON null value.
@@ -368,6 +397,7 @@ class JSONNull:JSONType {
 	void parse(ref string source) in { assert(source[0..4] == "null"); } body {
 		source = stripl(source[4..$]);
 	}
+	mixin(convfuncs);
 }
 
 /// JSONNumber represents any JSON numeric value.
@@ -406,6 +436,7 @@ class JSONNumber:JSONType {
 		_data = atof(source[0..i]);
 		source = stripl(source[i..$]);
 	}
+	mixin(convfuncs);
 }
 
 private JSONType parseHelper(ref string source) {
@@ -530,8 +561,8 @@ unittest {
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
 	assert(jstr.readJSON().toString == jstr);
 	writef("Unit Test libDJSON JSON access...\n");
-	writef("Got first name:");writef((cast(JSONString)jstr.readJSON()["firstName"]).get);writef("\n");
-	writef("Got last name:");writef((cast(JSONString)jstr.readJSON()["lastName"]).get);writef("\n");
+	writef("Got first name:");writef(jstr.readJSON()["firstName"].toJSONString.get);writef("\n");
+	writef("Got last name:");writef(jstr.readJSON()["lastName"].toJSONString.get);writef("\n");
 }
 
 version(JSON_main) {
