@@ -126,7 +126,18 @@ interface JSONType {
 	JSONBoolean toJSONBoolean();
 	JSONNumber toJSONNumber();
 	JSONNull toJSONNull();
+	// secondary convenience functions
+	JSONType opIndex(string key);
+	JSONType opIndex(int key);
+	int opApply(int delegate(string,JSONType) dg);
+	int opApply(int delegate(string,ref JSONType) dg);
+	int opApply(int delegate(int,JSONType) dg);
+	int opApply(int delegate(int,ref JSONType) dg);
+	// tertiary convenience functions
+	int opApply(int delegate(JSONType) dg);
+	int opApply(int delegate(ref JSONType) dg);
 }
+// everything needs these for ease of use
 const string convfuncs = 
 "
 /// Convenience function for casting to JSONObject
@@ -141,6 +152,26 @@ JSONBoolean toJSONBoolean(){return cast(JSONBoolean)this;}
 JSONNumber toJSONNumber(){return cast(JSONNumber)this;}
 /// Convenience function for casting to JSONNull
 JSONNull toJSONNull(){return cast(JSONNull)this;}";
+// only non-arrays need this
+const string convfuncsA = 
+"
+JSONType opIndex(int key) {throw new JSONError(typeof(this).stringof ~\" does not support integer indexing, check your JSON structure.\");}
+int opApply(int delegate(int,JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
+int opApply(int delegate(int,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
+";
+// only non-AAs need this
+const string convfuncsAA = 
+"
+JSONType opIndex(string key) {throw new JSONError(typeof(this).stringof ~\" does not support string indexing, check your JSON structure.\");}
+int opApply(int delegate(string,JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
+int opApply(int delegate(string,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
+";
+// neither arrays nor AAs need this
+const string convfuncsAAA = 
+"
+int opApply(int delegate(JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
+int opApply(int delegate(ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
+";
 /**
  * JSONObject represents a single JSON object node and has methods for 
  * adding children.  All methods that make changes modify this
@@ -235,6 +266,7 @@ class JSONObject:JSONType {
 		source = stripl(source[1..$]);
 	}
 	mixin(convfuncs);
+	mixin(convfuncsA);
 }
 
 /// JSONArray represents a single JSON array, capable of being heterogenous
@@ -318,6 +350,7 @@ class JSONArray:JSONType {
 		source = stripl(source[1..$]);
 	}
 	mixin(convfuncs);
+	mixin(convfuncsAA);
 }
 
 /// JSONString represents a JSON string.  Internal representation is escaped for faster parsing and JSON generation.
@@ -363,6 +396,9 @@ class JSONString:JSONType {
 		source = stripl(source[sliceloc+1..$]);
 	}
 	mixin(convfuncs);
+	mixin(convfuncsA);
+	mixin(convfuncsAA);
+	mixin(convfuncsAAA);
 }
 
 /// JSONBoolean represents a JSON boolean value.
@@ -385,6 +421,9 @@ class JSONBoolean:JSONType {
 		} else throw new JSONError("Could not parse JSON boolean variable from: "~source);
 	}
 	mixin(convfuncs);
+	mixin(convfuncsA);
+	mixin(convfuncsAA);
+	mixin(convfuncsAAA);
 }
 
 /// JSONNull represents a JSON null value.
@@ -398,6 +437,9 @@ class JSONNull:JSONType {
 		source = stripl(source[4..$]);
 	}
 	mixin(convfuncs);
+	mixin(convfuncsA);
+	mixin(convfuncsAA);
+	mixin(convfuncsAAA);
 }
 
 /// JSONNumber represents any JSON numeric value.
@@ -437,6 +479,9 @@ class JSONNumber:JSONType {
 		source = stripl(source[i..$]);
 	}
 	mixin(convfuncs);
+	mixin(convfuncsA);
+	mixin(convfuncsAA);
+	mixin(convfuncsAAA);
 }
 
 private JSONType parseHelper(ref string source) {
@@ -563,6 +608,15 @@ unittest {
 	writef("Unit Test libDJSON JSON access...\n");
 	writef("Got first name:");writef(jstr.readJSON()["firstName"].toJSONString.get);writef("\n");
 	writef("Got last name:");writef(jstr.readJSON()["lastName"].toJSONString.get);writef("\n");
+	writef("Unit Test libDJSON opApply interface...\n");
+	foreach(obj;jstr.readJSON()["phoneNumbers"]) {
+		writef("Got ");writef(obj["type"].toJSONString.get);writef(" phone number:");writef(obj["number"].toJSONString.get);writef("\n");
+	}
+	writef("Unit Test libDJSON opIndex interface to ensure breakage where incorrectly used...\n");
+	try {
+		jstr.readJSON()[5];
+		assert(false,"An exception should have been thrown on the line above.");
+	} catch (Exception e) {/*shazam! program flow should get here, it is a correct thing*/}
 }
 
 version(JSON_main) {
