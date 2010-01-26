@@ -119,21 +119,22 @@ interface JSONType {
 	string toString();
 	/// The parse method of this interface should ALWAYS be destructive, removing things from the front of source as it parses.
 	void parse(ref string source);
-	/// Conversion convenience functions
+	/// Convenience functions for casting
 	JSONObject toJSONObject();
 	JSONArray toJSONArray();
 	JSONString toJSONString();
 	JSONBoolean toJSONBoolean();
 	JSONNumber toJSONNumber();
 	JSONNull toJSONNull();
-	// secondary convenience functions
+	/// Convenience functions for objects describing array-like attributes
 	JSONType opIndex(string key);
-	JSONType opIndex(int key);
 	int opApply(int delegate(string,JSONType) dg);
 	int opApply(int delegate(string,ref JSONType) dg);
+	/// Convenience functions for objects describing associative array-like attributes
+	JSONType opIndex(int key);
 	int opApply(int delegate(int,JSONType) dg);
 	int opApply(int delegate(int,ref JSONType) dg);
-	// tertiary convenience functions
+	/// Convenience functions for iteration that apply to both AA and array type operations
 	int opApply(int delegate(JSONType) dg);
 	int opApply(int delegate(ref JSONType) dg);
 }
