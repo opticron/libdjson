@@ -100,7 +100,7 @@ JSONObject readJSON(string src) {
 	try {
 		root.parse(src);
 	} catch (JSONError e) {
-		writef("Caught exception from input string:\n",pointcpy,"\n");
+		writef("Caught exception from input string:\n" ~ pointcpy ~ "\n");
 		throw e;
 	}
 	return root;
@@ -596,22 +596,22 @@ unittest {
 	root["i am this many"] = new JSONNumber(10.253);
 	string jstr = root.toString;
 	writef("Unit Test libDJSON JSON creation...\n");
-	writef("Generated JSON string: ");writef(jstr);writef("\n");
-	writef("Regenerated JSON string: ");writef(readJSON(jstr).toString);writef("\n");
+	writef("Generated JSON string: " ~ jstr ~ "\n");
+	writef("Regenerated JSON string: " ~ readJSON(jstr).toString ~ "\n");
 	assert(jstr == readJSON(jstr).toString);
 	writef("Unit Test libDJSON JSON parsing...\n");
 	jstr = "{\"firstName\": \"John\",\"lastName\": \"Smith\",\"address\": {\"streetAddress\": \"21 2nd Street\",\"city\": \"New York\",\"state\": \"NY\",\"postalCode\": 10021},\"phoneNumbers\": [{ \"type\": \"home\", \"number\": \"212 555-1234\" },{ \"type\": \"fax\", \"number\": \"646 555-4567\" }],\"newSubscription\": false,\"companyName\": null }";
-	writef("Sample JSON string: ");writef(jstr);writef("\n");
+	writef("Sample JSON string: " ~ jstr ~ "\n");
 	jstr = jstr.readJSON().toString;
-	writef("Parsed JSON string: ");writef(jstr);writef("\n");
+	writef("Parsed JSON string: " ~ jstr ~ "\n");
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
 	assert(jstr.readJSON().toString == jstr);
 	writef("Unit Test libDJSON JSON access...\n");
-	writef("Got first name:");writef(jstr.readJSON()["firstName"].toJSONString.get);writef("\n");
-	writef("Got last name:");writef(jstr.readJSON()["lastName"].toJSONString.get);writef("\n");
+	writef("Got first name:" ~ jstr.readJSON()["firstName"].toJSONString.get ~ "\n");
+	writef("Got last name:" ~ jstr.readJSON()["lastName"].toJSONString.get ~ "\n");
 	writef("Unit Test libDJSON opApply interface...\n");
 	foreach(obj;jstr.readJSON()["phoneNumbers"]) {
-		writef("Got ");writef(obj["type"].toJSONString.get);writef(" phone number:");writef(obj["number"].toJSONString.get);writef("\n");
+		writef("Got " ~ obj["type"].toJSONString.get ~ " phone number:" ~ obj["number"].toJSONString.get ~ "\n");
 	}
 	writef("Unit Test libDJSON opIndex interface to ensure breakage where incorrectly used...\n");
 	try {
