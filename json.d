@@ -241,8 +241,9 @@ class JSONObject:JSONType {
 	}
 
 	/// This function parses a JSONObject out of a string
-	void parse(ref string source) in { assert(source[0] == '{'); } body {
-		// only put the incoming check in the in, because it should have already been checked if we're this far
+	void parse(ref string source) {
+		// make sure the first byte is {
+		if (source[0] != '{') throw new JSONError("Missing open brace '{' at start of JSONObject parse: "~source);
 		// rip off the leading {
 		source = stripl(source[1..$]);
 		while (source[0] != '}') {
@@ -332,8 +333,8 @@ class JSONArray:JSONType {
 		return ret;
 	}
 	/// This function parses a JSONArray out of a string
-	void parse(ref string source) in { assert(source[0] == '['); } body {
-		// only put the incoming check in the in, because it should have already been checked if we're this far
+	void parse(ref string source) {
+		if (source[0] != '[') throw new JSONError("Missing open brace '[' at start of JSONArray parse: "~source);
 		// rip off the leading [
 		source = stripl(source[1..$]);
 		while (source[0] != ']') {
@@ -365,8 +366,8 @@ class JSONString:JSONType {
 		return "\""~_data~"\"";
 	}
 	/// This function parses a JSONArray out of a string
-	void parse(ref string source) in { assert(source[0] == '"'); } body {
-		// only put the incoming check in the in, because it should have already been checked if we're this far
+	void parse(ref string source) {
+		if (source[0] != '"') throw new JSONError("Missing open quote '\"' at start of JSONArray parse: "~source);
 		// rip off the leading [
 		source = source[1..$];
 		// scan to find the closing quote
