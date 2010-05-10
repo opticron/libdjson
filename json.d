@@ -228,7 +228,7 @@ class JSONObject:JSONType {
 		}
 		return 0;
 	}
-	string toString() {
+	override string toString() {
 		string ret;
 		ret ~= "{";
 		foreach (key,val;_children) {
@@ -321,7 +321,7 @@ class JSONArray:JSONType {
 		}
 		return 0;
 	}
-	string toString() {
+	override string toString() {
 		string ret;
 		ret ~= "[";
 		foreach (val;_children) {
@@ -362,7 +362,7 @@ class JSONString:JSONType {
 	protected string _data;
 	void set(string data) {_data = JSONEncode(data);}
 	string get() {return JSONDecode(_data);}
-	string toString() {
+	override string toString() {
 		return "\""~_data~"\"";
 	}
 	/// This function parses a JSONArray out of a string
@@ -410,7 +410,7 @@ class JSONBoolean:JSONType {
 	void set(bool data) {_data = data;}
 	bool get() {return _data;}
 	protected bool _data;
-	string toString() {
+	override string toString() {
 		if (_data) return "true";
 		return "false";
 	}
@@ -431,7 +431,7 @@ class JSONBoolean:JSONType {
 /// JSONNull represents a JSON null value.
 class JSONNull:JSONType {
 	this(){}
-	string toString() {
+	override string toString() {
 		return "null";
 	}
 	/// This function parses a JSONNull out of a string.  Really, it just rips "null" off the beginning of the string and eats whitespace.
@@ -451,7 +451,7 @@ class JSONNumber:JSONType {
 	void set(real data) {_data = data;}
 	real get() {return _data;}
 	protected real _data;
-	string toString() {
+	override string toString() {
 		return tostring(_data);
 	}
 	/// This function parses a JSONNumber out of a string
