@@ -28,11 +28,10 @@
  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  DEALINGS IN THE SOFTWARE.
 
- * Standards:	Attempts to conform to the subset of Javascript require to implement the JSON Specification
+ * Standards:	Attempts to conform to the subset of Javascript required to implement the JSON Specification
  */
 
 /* My TODO list:
- *	implement a X to(X:JSONType)() template to make things easier to convert versus having casts EVERYWHERE
  *	implement some kind of XPath like search ability
  */
 module libdjson.json;
@@ -142,35 +141,49 @@ interface JSONType {
 const string convfuncs = 
 "
 /// Convenience function for casting to JSONObject
+/// Returns: The casted object or null if the cast fails
 JSONObject toJSONObject(){return cast(JSONObject)this;}
 /// Convenience function for casting to JSONArray
+/// Returns: The casted object or null if the cast fails
 JSONArray toJSONArray(){return cast(JSONArray)this;}
 /// Convenience function for casting to JSONString
+/// Returns: The casted object or null if the cast fails
 JSONString toJSONString(){return cast(JSONString)this;}
 /// Convenience function for casting to JSONBoolean
+/// Returns: The casted object or null if the cast fails
 JSONBoolean toJSONBoolean(){return cast(JSONBoolean)this;}
 /// Convenience function for casting to JSONNumber
+/// Returns: The casted object or null if the cast fails
 JSONNumber toJSONNumber(){return cast(JSONNumber)this;}
 /// Convenience function for casting to JSONNull
+/// Returns: The casted object or null if the cast fails
 JSONNull toJSONNull(){return cast(JSONNull)this;}";
 // only non-arrays need this
 const string convfuncsA = 
 "
+/// Dummy function for types that don't implement integer indexing.  Throws an exception.
 JSONType opIndex(int key) {throw new JSONError(typeof(this).stringof ~\" does not support integer indexing, check your JSON structure.\");}
+/// Dummy function for types that don't implement integer indexing.  Throws an exception.
 int opApply(int delegate(int,JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
+/// Dummy function for types that don't implement integer indexing.  Throws an exception.
 int opApply(int delegate(int,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
 ";
 // only non-AAs need this
 const string convfuncsAA = 
 "
+/// Dummy function for types that don't implement string indexing.  Throws an exception.
 JSONType opIndex(string key) {throw new JSONError(typeof(this).stringof ~\" does not support string indexing, check your JSON structure.\");}
+/// Dummy function for types that don't implement string indexing.  Throws an exception.
 int opApply(int delegate(string,JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
+/// Dummy function for types that don't implement string indexing.  Throws an exception.
 int opApply(int delegate(string,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
 ";
 // neither arrays nor AAs need this
 const string convfuncsAAA = 
 "
+/// Dummy function for types that don't implement any type of indexing.  Throws an exception.
 int opApply(int delegate(JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
+/// Dummy function for types that don't implement any type of indexing.  Throws an exception.
 int opApply(int delegate(ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
 ";
 /**
@@ -180,6 +193,7 @@ int opApply(int delegate(ref JSONType) dg) {throw new JSONError(typeof(this).str
  * return a self reference to allow cascaded calls.
  */
 class JSONObject:JSONType {
+	/// Nothing to see here except for the boring constructor, move along.
 	this(){}
 	protected JSONType[string] _children;
 	/// Operator overload for setting keys in the AA.
@@ -187,10 +201,12 @@ class JSONObject:JSONType {
 		_children[key] = type;
 	}
 	/// Operator overload for accessing values already in the AA.
+	/// Returns: The child node if it exists, otherwise null.
 	JSONType opIndex(string key) {
 		return (key in _children)?_children[key]:null;
 	}
 	/// Allow the user to get the number of elements in this object
+	/// Returns: The number of child nodes contained within this JSONObject
 	int length() {return _children.length;}
 	/// Operator overload for foreach iteration through the object with values only
 	int opApply(int delegate(JSONType) dg) {
@@ -228,6 +244,9 @@ class JSONObject:JSONType {
 		}
 		return 0;
 	}
+
+	/// A method to convert this JSONObject to a user readable format.
+	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		string ret;
 		ret ~= "{";
@@ -273,6 +292,7 @@ class JSONObject:JSONType {
 
 /// JSONArray represents a single JSON array, capable of being heterogenous
 class JSONArray:JSONType {
+	/// Nothing to see here, move along.
 	this(){}
 	protected JSONType[] _children;
 	/// Operator overload to allow addition of children
@@ -280,10 +300,12 @@ class JSONArray:JSONType {
 		_children ~= child;
 	}
 	/// Operator overload to allow access of children
+	/// Returns: The child node if it exists, otherwise null.
 	JSONType opIndex(int key) {
 		return _children[key];
 	}
 	/// Allow the user to get the number of elements in this object
+	/// Returns: The number of child nodes contained within this JSONObject
 	int length() {return _children.length;}
 	/// Operator overload for foreach iteration through the array with values only
 	int opApply(int delegate(JSONType) dg) {
@@ -321,6 +343,9 @@ class JSONArray:JSONType {
 		}
 		return 0;
 	}
+
+	/// A method to convert this JSONArray to a user readable format.
+	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		string ret;
 		ret ~= "[";
@@ -332,6 +357,7 @@ class JSONArray:JSONType {
 		ret ~= "]";
 		return ret;
 	}
+
 	/// This function parses a JSONArray out of a string
 	void parse(ref string source) {
 		if (source[0] != '[') throw new JSONError("Missing open brace '[' at start of JSONArray parse: "~source);
@@ -357,15 +383,23 @@ class JSONArray:JSONType {
 
 /// JSONString represents a JSON string.  Internal representation is escaped for faster parsing and JSON generation.
 class JSONString:JSONType {
+	/// The boring default constructor.
 	this(){}
+	/// The ever so slightly more interesting initializing constructor.
 	this(string data) {set(data);}
 	protected string _data;
+	/// Allow the data to be set so the object can be reused.
 	void set(string data) {_data = JSONEncode(data);}
+	/// Allow the data to be retreived.
 	string get() {return JSONDecode(_data);}
+
+	/// A method to convert this JSONString to a user readable format.
+	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		return "\""~_data~"\"";
 	}
-	/// This function parses a JSONArray out of a string
+
+	/// This function parses a JSONArray out of a string and eats characters as it goes, hence the ref string parameter.
 	void parse(ref string source) {
 		if (source[0] != '"') throw new JSONError("Missing open quote '\"' at start of JSONArray parse: "~source);
 		// rip off the leading [
@@ -405,16 +439,24 @@ class JSONString:JSONType {
 
 /// JSONBoolean represents a JSON boolean value.
 class JSONBoolean:JSONType {
+	/// The boring constructor, again.
 	this(){}
+	/// Only a bit of input for this constructor.
 	this(bool data) {_data = data;}
+	/// Allow setting of the hidden bit.
 	void set(bool data) {_data = data;}
+	/// Allow the bit to be retreived.
 	bool get() {return _data;}
 	protected bool _data;
+
+	/// A method to convert this JSONBoolean to a user readable format.
+	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		if (_data) return "true";
 		return "false";
 	}
-	/// This function parses a JSONBoolean out of a string
+
+	/// This function parses a JSONBoolean out of a string and eats characters as it goes, hence the ref string parameter.
 	void parse(ref string source) {
 		if (source[0..4] == "true") {
 			source = stripl(source[4..$]);
@@ -430,7 +472,11 @@ class JSONBoolean:JSONType {
 
 /// JSONNull represents a JSON null value.
 class JSONNull:JSONType {
+	/// You're forced to use the boring constructor here.
 	this(){}
+
+	/// A method to convert this JSONNull to a user readable format.
+	/// Returns: "null". Always. Forever.
 	override string toString() {
 		return "null";
 	}
@@ -446,15 +492,22 @@ class JSONNull:JSONType {
 
 /// JSONNumber represents any JSON numeric value.
 class JSONNumber:JSONType {
+	/// Another boring constructor...
 	this(){}
+	/// ...and its slightly less boring sibling.
 	this(real data) {_data = data;}
+	/// Allow setting of the hidden number.
 	void set(real data) {_data = data;}
+	/// Allow the number to be retreived.
 	real get() {return _data;}
 	protected real _data;
+
+	/// A method to convert this JSONNumber to a user readable format.
+	/// Returns: A JSON string representing this number.
 	override string toString() {
 		return tostring(_data);
 	}
-	/// This function parses a JSONNumber out of a string
+	/// This function parses a JSONNumber out of a string and eats characters as it goes, hence the ref string parameter.
 	void parse(ref string source) {
 		// this parser sucks...
 		int i = 0;
@@ -514,6 +567,7 @@ private JSONType parseHelper(ref string source) {
 }
 
 /// Perform JSON escapes on a string
+/// Returns: A JSON encoded string
 string JSONEncode(string src) {
 	string tempStr;
         tempStr = replace(src    , "\\", "\\\\");
@@ -522,6 +576,7 @@ string JSONEncode(string src) {
 }
 
 /// Unescape a JSON string
+/// Returns: A decoded string.
 string JSONDecode(string src) {
 	string tempStr;
         tempStr = replace(src    , "\\\\", "\\");
@@ -541,6 +596,7 @@ string JSONDecode(string src) {
         return tempStr;
 }
 
+/// This probably needs documentation.  It looks like it converts a dchar to the necessary length string of chars.
 string quickUTF8(dchar dachar) {
 	char[] ret;
 	if (dachar <= 0x7F) {
