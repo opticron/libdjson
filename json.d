@@ -273,7 +273,7 @@ class JSONObject:JSONType {
 			source = stripl(source);
 			if (source[0] != ':') throw new JSONError("Missing ':' after keystring in object before: "~source);
 			source = stripl(source[1..$]);
-			_children[jstr._data] = parseHelper(source);
+			_children[jstr.get] = parseHelper(source);
 			source = stripl(source);
 			// handle end cases
 			if (source[0] == '}') continue;
