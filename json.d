@@ -273,7 +273,7 @@ class JSONObject:JSONType {
 			source = stripl(source);
 			if (source[0] != ':') throw new JSONError("Missing ':' after keystring in object before: "~source);
 			source = stripl(source[1..$]);
-			_children[jstr.get] = parseHelper(source);
+			_children[jstr._data] = parseHelper(source);
 			source = stripl(source);
 			// handle end cases
 			if (source[0] == '}') continue;
@@ -588,6 +588,7 @@ string JSONDecode(string src) {
         tempStr = replace(tempStr, "\\t", "\t");
         tempStr = replace(tempStr, "\\b", "\b");
 	// take care of hex character entities
+	// XXX regex is broken in tango 0.99.9 which means this doesn't work right when numbers enter the mix
 	tempStr = regrep(tempStr,"\\u[0-9a-fA-F]{4};",(string m) {
 		auto cnum = m[3..$-1];
 		dchar dnum = hex2dchar(cnum[1..$]);
