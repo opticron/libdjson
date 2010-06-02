@@ -116,25 +116,44 @@ class JSONError : Exception {
 /// This is the interface implemented by all classes that represent JSON objects.
 interface JSONType {
 	string toString();
+	string toPrettyString(string indent);
 	/// The parse method of this interface should ALWAYS be destructive, removing things from the front of source as it parses.
 	void parse(ref string source);
-	/// Convenience functions for casting
+	/// Convenience function for casting to JSONObject.
+	/// Returns: The casted reference or null on a failed cast.
 	JSONObject toJSONObject();
+	/// Convenience function for casting to JSONArray.
+	/// Returns: The casted reference or null on a failed cast.
 	JSONArray toJSONArray();
+	/// Convenience function for casting to JSONString.
+	/// Returns: The casted reference or null on a failed cast.
 	JSONString toJSONString();
+	/// Convenience function for casting to JSONBoolean.
+	/// Returns: The casted reference or null on a failed cast.
 	JSONBoolean toJSONBoolean();
+	/// Convenience function for casting to JSONNumber.
+	/// Returns: The casted reference or null on a failed cast.
 	JSONNumber toJSONNumber();
+	/// Convenience function for casting to JSONNull.
+	/// Returns: The casted reference or null on a failed cast.
 	JSONNull toJSONNull();
-	/// Convenience functions for objects describing array-like attributes
+	/// Associative array index function for objects describing associative array-like attributes.
+	/// Returns: The chosen index or a null reference if the index does not exist.
 	JSONType opIndex(string key);
+	/// Allow foreach over the object with string key.
 	int opApply(int delegate(string,JSONType) dg);
+	/// Allow foreach over the object with string key and ref value.
 	int opApply(int delegate(string,ref JSONType) dg);
-	/// Convenience functions for objects describing associative array-like attributes
+	/// Array index function for objects describing array-like attributes.
+	/// Returns: The chosen index or a null reference if the index does not exist.
 	JSONType opIndex(int key);
+	/// Allow foreach over the object with integer key.
 	int opApply(int delegate(int,JSONType) dg);
+	/// Allow foreach over the object with integer key and ref value.
 	int opApply(int delegate(int,ref JSONType) dg);
-	/// Convenience functions for iteration that apply to both AA and array type operations
+	/// Convenience function for iteration that apply to both AA and array type operations
 	int opApply(int delegate(JSONType) dg);
+	/// Convenience function for iteration that apply to both AA and array type operations with ref value
 	int opApply(int delegate(ref JSONType) dg);
 }
 // everything needs these for ease of use
@@ -245,7 +264,7 @@ class JSONObject:JSONType {
 		return 0;
 	}
 
-	/// A method to convert this JSONObject to a user readable format.
+	/// A method to convert this JSONObject to a user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		string ret;
@@ -256,6 +275,20 @@ class JSONObject:JSONType {
 		// rip off the trailing comma, we don't need it
 		if (ret.length > 1) ret = ret[0..$-1];
 		ret ~= "}";
+		return ret;
+	}
+
+	/// A method to convert this JSONObject to a formatted, user-readable format.
+	/// Returns: A JSON string representing this object and it's contents.
+	string toPrettyString(string indent=null) {
+		string ret;
+		ret ~= "{\n";
+		foreach (key,val;_children) {
+			ret ~= indent~"	\""~JSONEncode(key)~"\":"~val.toPrettyString(indent~"	")~",\n";
+		}
+		// rip off the trailing comma, we don't need it
+		if (ret.length > 1) ret = ret[0..$-2]~"\n";
+		ret ~= indent~"}";
 		return ret;
 	}
 
@@ -344,7 +377,7 @@ class JSONArray:JSONType {
 		return 0;
 	}
 
-	/// A method to convert this JSONArray to a user readable format.
+	/// A method to convert this JSONArray to a user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		string ret;
@@ -355,6 +388,20 @@ class JSONArray:JSONType {
 		// rip off the trailing comma, we don't need it
 		if (ret.length > 1) ret = ret[0..$-1];
 		ret ~= "]";
+		return ret;
+	}
+
+	/// A method to convert this JSONArray to a formatted, user-readable format.
+	/// Returns: A JSON string representing this object and it's contents.
+	string toPrettyString(string indent=null) {
+		string ret;
+		ret ~= "[\n";
+		foreach (val;_children) {
+			ret ~= indent~"	"~val.toPrettyString(indent~"	")~",\n";
+		}
+		// rip off the trailing comma, we don't need it
+		if (ret.length > 1) ret = ret[0..$-2]~"\n";
+		ret ~= indent~"]";
 		return ret;
 	}
 
@@ -393,10 +440,16 @@ class JSONString:JSONType {
 	/// Allow the data to be retreived.
 	string get() {return JSONDecode(_data);}
 
-	/// A method to convert this JSONString to a user readable format.
+	/// A method to convert this JSONString to a user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		return "\""~_data~"\"";
+	}
+
+	/// A method to convert this JSONString to a formatted, user-readable format.
+	/// Returns: A JSON string representing this object and it's contents.
+	string toPrettyString(string indent=null) {
+		return toString;
 	}
 
 	/// This function parses a JSONArray out of a string and eats characters as it goes, hence the ref string parameter.
@@ -449,11 +502,17 @@ class JSONBoolean:JSONType {
 	bool get() {return _data;}
 	protected bool _data;
 
-	/// A method to convert this JSONBoolean to a user readable format.
+	/// A method to convert this JSONBoolean to a user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
 	override string toString() {
 		if (_data) return "true";
 		return "false";
+	}
+
+	/// A method to convert this JSONBoolean to a formatted, user-readable format.
+	/// Returns: A JSON string representing this object and it's contents.
+	string toPrettyString(string indent=null) {
+		return toString;
 	}
 
 	/// This function parses a JSONBoolean out of a string and eats characters as it goes, hence the ref string parameter.
@@ -475,11 +534,18 @@ class JSONNull:JSONType {
 	/// You're forced to use the boring constructor here.
 	this(){}
 
-	/// A method to convert this JSONNull to a user readable format.
+	/// A method to convert this JSONNull to a user-readable format.
 	/// Returns: "null". Always. Forever.
 	override string toString() {
 		return "null";
 	}
+
+	/// A method to convert this JSONNull to a formatted, user-readable format.
+	/// Returns: "null". Always. Forever.
+	string toPrettyString(string indent=null) {
+		return toString;
+	}
+
 	/// This function parses a JSONNull out of a string.  Really, it just rips "null" off the beginning of the string and eats whitespace.
 	void parse(ref string source) in { assert(source[0..4] == "null"); } body {
 		source = stripl(source[4..$]);
@@ -502,11 +568,18 @@ class JSONNumber:JSONType {
 	real get() {return _data;}
 	protected real _data;
 
-	/// A method to convert this JSONNumber to a user readable format.
+	/// A method to convert this JSONNumber to a user-readable format.
 	/// Returns: A JSON string representing this number.
 	override string toString() {
 		return tostring(_data);
 	}
+
+	/// A method to convert this JSONNumber to a formatted, user-readable format.
+	/// Returns: A JSON string representing this number.
+	string toPrettyString(string indent=null) {
+		return toString;
+	}
+
 	/// This function parses a JSONNumber out of a string and eats characters as it goes, hence the ref string parameter.
 	void parse(ref string source) {
 		// this parser sucks...
@@ -656,14 +729,19 @@ unittest {
 	writef("Unit Test libDJSON JSON creation...\n");
 	writef("Generated JSON string: " ~ jstr ~ "\n");
 	writef("Regenerated JSON string: " ~ readJSON(jstr).toString ~ "\n");
+	writef("Output using toPrettyString:\n"~root.toPrettyString~"\nEnd pretty output\n");
 	assert(jstr == readJSON(jstr).toString);
 	writef("Unit Test libDJSON JSON parsing...\n");
 	jstr = "{\"firstName\": \"John\",\"lastName\": \"Smith\",\"address\": {\"streetAddress\": \"21 2nd Street\",\"city\": \"New York\",\"state\": \"NY\",\"postalCode\": 10021},\"phoneNumbers\": [{ \"type\": \"home\", \"number\": \"212 555-1234\" },{ \"type\": \"fax\", \"number\": \"646 555-4567\" }],\"newSubscription\": false,\"companyName\": null }";
 	writef("Sample JSON string: " ~ jstr ~ "\n");
 	jstr = jstr.readJSON().toString;
 	writef("Parsed JSON string: " ~ jstr ~ "\n");
+	writef("Output using toPrettyString:\n"~jstr.readJSON().toPrettyString~"\nEnd pretty output\n");
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
 	assert(jstr.readJSON().toString == jstr);
+	// ensure that pretty output still parses properly and doesn't mutate
+	jstr = jstr.readJSON().toPrettyString;
+	assert(jstr.readJSON().toPrettyString == jstr);
 	writef("Unit Test libDJSON JSON access...\n");
 	writef("Got first name:" ~ jstr.readJSON()["firstName"].toJSONString.get ~ "\n");
 	writef("Got last name:" ~ jstr.readJSON()["lastName"].toJSONString.get ~ "\n");
