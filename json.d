@@ -562,8 +562,12 @@ class JSONNumber:JSONType {
 	this(){}
 	/// ...and its slightly less boring sibling.
 	this(real data) {_data = tostring(data);}
+	this(long data) {_data = tostring(data);}
+	this(int data) {_data = tostring(data);}
 	/// Allow setting of the hidden number.
 	void set(real data) {_data = tostring(data);}
+	void set(long data) {_data = tostring(data);}
+	void set(int data) {_data = tostring(data);}
 	/// Allow the number to be retreived.
 	real get() {return atof(_data);}
 	long getLong() {return atoi(_data);}
