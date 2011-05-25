@@ -37,7 +37,7 @@
 module libdjson.json;
 version(Tango) {
 	import tango.text.Util:isspace=isSpace,stripl=triml,strip=trim,stripr=trimr,find=locatePattern,split,replace=substitute;
-	import tango.text.convert.Integer:tostring=toString,atoi=toInt;
+	import tango.text.convert.Integer:tostring=toString,atoi=toLong;
 	import tango.text.convert.Float:tostring=toString,atof=toFloat;
 	import tango.text.Ascii:icmp=icompare,cmp=compare;
 	import tango.io.Stdout:writef=Stdout;
@@ -561,17 +561,19 @@ class JSONNumber:JSONType {
 	/// Another boring constructor...
 	this(){}
 	/// ...and its slightly less boring sibling.
-	this(real data) {_data = data;}
+	this(real data) {_data = tostring(data);}
 	/// Allow setting of the hidden number.
-	void set(real data) {_data = data;}
+	void set(real data) {_data = tostring(data);}
 	/// Allow the number to be retreived.
-	real get() {return _data;}
-	protected real _data;
+	real get() {return atof(_data);}
+	long getLong() {return atoi(_data);}
+	real getReal() {return atof(_data);}
+	protected string _data;
 
 	/// A method to convert this JSONNumber to a user-readable format.
 	/// Returns: A JSON string representing this number.
 	override string toString() {
-		return tostring(_data);
+		return _data;
 	}
 
 	/// A method to convert this JSONNumber to a formatted, user-readable format.
@@ -603,7 +605,7 @@ class JSONNumber:JSONType {
 			if (source[i] == '-' || source[i] == '+') i++;
 			while (source[i] >= '0' && source[i] <= '9') i++;
 		}
-		_data = atof(source[0..i]);
+		_data = source[0..i];
 		source = stripl(source[i..$]);
 	}
 	mixin(convfuncs);
