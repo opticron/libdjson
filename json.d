@@ -93,11 +93,11 @@ version(Tango) {
  * Returns: A JSONObject with no name that is the root of the document that was read.
  * Throws: JSONError on any parsing errors.
  */
-JSONObject readJSON(string src) {
+JSONType readJSON(string src) {
 	string pointcpy = src;
-	auto root = new JSONObject();
+	JSONType root = null;
 	try {
-		root.parse(src);
+		root = parseHelper(src);
 	} catch (JSONError e) {
 		writef("Caught exception from input string:\n" ~ pointcpy ~ "\n");
 		throw e;
@@ -116,7 +116,7 @@ class JSONError : Exception {
 /// This is the interface implemented by all classes that represent JSON objects.
 interface JSONType {
 	string toString();
-	string toPrettyString(string indent);
+	string toPrettyString(string indent=null);
 	/// The parse method of this interface should ALWAYS be destructive, removing things from the front of source as it parses.
 	void parse(ref string source);
 	/// Convenience function for casting to JSONObject.
