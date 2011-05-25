@@ -418,8 +418,8 @@ class JSONArray:JSONType {
 			if (source[0] != ',') throw new JSONError("Missing continuation via ',' or end of JSON array via ']' before "~source);
 			// rip the , in preparation for the next loop
 			source = stripl(source[1..$]);
-			// make sure we don't have a ",]", since I'm assuming it's not allowed
-			if (source[0] == ']') throw new JSONError("Empty array elements (',' followed by ']') are not allowed. Fill the space or remove the comma.\nThis error occurred before: "~source);
+			// take care of trailing null entries
+			if (source[0] == ']') _children ~= new JSONNull();
 		}
 		// rip off the ] and be done with it
 		source = stripl(source[1..$]);
@@ -628,10 +628,9 @@ private JSONType parseHelper(ref string source) {
 		ret = new JSONNumber();
 		break;
 	default:
-		// you need at least 5 characters for true or null and a closing character, this makes the slice for false safe
-		if (source.length < 5) throw new JSONError("There seems to be a problem parsing the remainder of the text from this point: "~source);
-		if (source[0..4] == "null") ret = new JSONNull();
-		else if (source[0..4] == "true" || source[0..5] == "false") ret = new JSONBoolean();
+		if (source.length >= 4 && source[0..4] == "null") ret = new JSONNull();
+		else if ((source.length >= 4 && source[0..4] == "true") || (source.length >= 5 && source[0..5] == "false")) ret = new JSONBoolean();
+		else if (source.length && source[0] == ',') return new JSONNull(); // no parse here
 		else throw new JSONError("Unable to determine type of next element beginning: "~source);
 		break;
 	}
@@ -755,6 +754,8 @@ unittest {
 		jstr.readJSON()[5];
 		assert(false,"An exception should have been thrown on the line above.");
 	} catch (Exception e) {/*shazam! program flow should get here, it is a correct thing*/}
+	writef("Testing alternate base container and empty elements...\n");
+	assert("[,,]".readJSON().toString == "[null,null,null]");
 }
 
 version(JSON_main) {
