@@ -37,8 +37,8 @@
 module libdjson.json;
 version(Tango) {
 	import tango.text.Util:isspace=isSpace,stripl=triml,strip=trim,stripr=trimr,find=locatePattern,split,replace=substitute;
-	import tango.text.convert.Integer:tostring=toString,atoi=toLong;
-	import tango.text.convert.Float:tostring=toString,atof=toFloat;
+	import tango.text.convert.Integer:tostring=toString,agToULong=toLong;
+	import tango.text.convert.Float:tostring=toString,agToFloat=toFloat;
 	import tango.text.Ascii:icmp=icompare,cmp=compare;
 	import tango.io.Stdout:writef=Stdout;
 	import tango.text.Regex;
@@ -53,17 +53,21 @@ version(Tango) {
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi;
-		real atof(string data) {
+		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp;
+		real agToFloat(string data) {
 			return to!(real)(data);
+		}
+		ulong agToULong(string data) {
+			return to!(ulong)(data);
 		}
 		string tostring(real data) {
 			return to!(string)(data);
 		}
 	} else {
-		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi,atof;
+		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp;
+		import std.conv:agToULong=toUlong,agToFloat=toReal;
 	}
-	import std.stdio;
+	import std.stdio:writef;
 	import std.ctype:isspace;
 	import std.regexp:sub,RegExp;
 	//import std.utf:toUTF8;
@@ -71,7 +75,7 @@ version(Tango) {
 		string tmpdel(RegExp m) {
 			return translator(m.match(0));
 		}
-		return std.regexp.sub(input,pattern,&tmpdel,"g");
+		return sub(input,pattern,&tmpdel,"g");
 	}
 }
 
@@ -140,19 +144,13 @@ interface JSONType {
 	/// Associative array index function for objects describing associative array-like attributes.
 	/// Returns: The chosen index or a null reference if the index does not exist.
 	JSONType opIndex(string key);
-	/// Allow foreach over the object with string key.
-	int opApply(int delegate(string,JSONType) dg);
 	/// Allow foreach over the object with string key and ref value.
-	int opApply(int delegate(string,ref JSONType) dg);
+	int opApply(int delegate(ref string,ref JSONType) dg);
 	/// Array index function for objects describing array-like attributes.
 	/// Returns: The chosen index or a null reference if the index does not exist.
 	JSONType opIndex(int key);
-	/// Allow foreach over the object with integer key.
-	int opApply(int delegate(int,JSONType) dg);
 	/// Allow foreach over the object with integer key and ref value.
-	int opApply(int delegate(int,ref JSONType) dg);
-	/// Convenience function for iteration that apply to both AA and array type operations
-	int opApply(int delegate(JSONType) dg);
+	int opApply(int delegate(ref int,ref JSONType) dg);
 	/// Convenience function for iteration that apply to both AA and array type operations with ref value
 	int opApply(int delegate(ref JSONType) dg);
 }
@@ -183,9 +181,7 @@ const string convfuncsA =
 /// Dummy function for types that don't implement integer indexing.  Throws an exception.
 JSONType opIndex(int key) {throw new JSONError(typeof(this).stringof ~\" does not support integer indexing, check your JSON structure.\");}
 /// Dummy function for types that don't implement integer indexing.  Throws an exception.
-int opApply(int delegate(int,JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
-/// Dummy function for types that don't implement integer indexing.  Throws an exception.
-int opApply(int delegate(int,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
+int opApply(int delegate(ref int,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
 ";
 // only non-AAs need this
 const string convfuncsAA = 
@@ -193,15 +189,11 @@ const string convfuncsAA =
 /// Dummy function for types that don't implement string indexing.  Throws an exception.
 JSONType opIndex(string key) {throw new JSONError(typeof(this).stringof ~\" does not support string indexing, check your JSON structure.\");}
 /// Dummy function for types that don't implement string indexing.  Throws an exception.
-int opApply(int delegate(string,JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
-/// Dummy function for types that don't implement string indexing.  Throws an exception.
-int opApply(int delegate(string,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
+int opApply(int delegate(ref string,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
 ";
 // neither arrays nor AAs need this
 const string convfuncsAAA = 
 "
-/// Dummy function for types that don't implement any type of indexing.  Throws an exception.
-int opApply(int delegate(JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
 /// Dummy function for types that don't implement any type of indexing.  Throws an exception.
 int opApply(int delegate(ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
 ";
@@ -227,15 +219,6 @@ class JSONObject:JSONType {
 	/// Allow the user to get the number of elements in this object
 	/// Returns: The number of child nodes contained within this JSONObject
 	int length() {return _children.length;}
-	/// Operator overload for foreach iteration through the object with values only
-	int opApply(int delegate(JSONType) dg) {
-		int res;
-		foreach(child;_children) {
-			res = dg(child);
-			if (res) return res;
-		}
-		return 0;
-	}
 	/// Operator overload for foreach iteration through the object with values only and allow modification of the reference
 	int opApply(int delegate(ref JSONType) dg) {
 		int res;
@@ -245,17 +228,8 @@ class JSONObject:JSONType {
 		}
 		return 0;
 	}
-	/// Operator overload for foreach iteration through the object with key and value
-	int opApply(int delegate(string,JSONType) dg) {
-		int res;
-		foreach(key,child;_children) {
-			res = dg(key,child);
-			if (res) return res;
-		}
-		return 0;
-	}
 	/// Operator overload for foreach iteration through the object with key and value and allow modification of the reference
-	int opApply(int delegate(string,ref JSONType) dg) {
+	int opApply(int delegate(ref string,ref JSONType) dg) {
 		int res;
 		foreach(key,ref child;_children) {
 			res = dg(key,child);
@@ -340,15 +314,6 @@ class JSONArray:JSONType {
 	/// Allow the user to get the number of elements in this object
 	/// Returns: The number of child nodes contained within this JSONObject
 	int length() {return _children.length;}
-	/// Operator overload for foreach iteration through the array with values only
-	int opApply(int delegate(JSONType) dg) {
-		int res;
-		foreach(child;_children) {
-			res = dg(child);
-			if (res) return res;
-		}
-		return 0;
-	}
 	/// Operator overload for foreach iteration through the array with values only and allow modification of the reference
 	int opApply(int delegate(ref JSONType) dg) {
 		int res;
@@ -358,20 +323,13 @@ class JSONArray:JSONType {
 		}
 		return 0;
 	}
-	/// Operator overload for foreach iteration through the array with key and value
-	int opApply(int delegate(int,JSONType) dg) {
-		int res;
-		foreach(key,child;_children) {
-			res = dg(key,child);
-			if (res) return res;
-		}
-		return 0;
-	}
 	/// Operator overload for foreach iteration through the array with key and value and allow modification of the reference
-	int opApply(int delegate(int,ref JSONType) dg) {
+	int opApply(int delegate(ref int,ref JSONType) dg) {
 		int res;
-		foreach(key,ref child;_children) {
-			res = dg(key,child);
+		int tmp;
+		foreach(ref key,ref child;_children) {
+			tmp = key;
+			res = dg(tmp,child);
 			if (res) return res;
 		}
 		return 0;
@@ -569,9 +527,9 @@ class JSONNumber:JSONType {
 	void set(long data) {_data = tostring(data);}
 	void set(int data) {_data = tostring(data);}
 	/// Allow the number to be retreived.
-	real get() {return atof(_data);}
-	long getLong() {return atoi(_data);}
-	real getReal() {return atof(_data);}
+	real get() {return agToFloat(_data);}
+	long getLong() {return agToULong(_data);}
+	real getReal() {return agToULong(_data);}
 	protected string _data;
 
 	/// A method to convert this JSONNumber to a user-readable format.
@@ -754,6 +712,9 @@ unittest {
 	writef("Unit Test libDJSON opApply interface...\n");
 	foreach(obj;jstr.readJSON()["phoneNumbers"]) {
 		writef("Got " ~ obj["type"].toJSONString.get ~ " phone number:" ~ obj["number"].toJSONString.get ~ "\n");
+	}
+	foreach(string name,JSONType obj;jstr.readJSON()) {
+		writef("Got element name " ~ name ~ "\n");
 	}
 	writef("Unit Test libDJSON opIndex interface to ensure breakage where incorrectly used...\n");
 	try {
