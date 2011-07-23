@@ -101,6 +101,7 @@ JSONType readJSON(string src) {
 	string pointcpy = src;
 	JSONType root = null;
 	try {
+		src = src.stripl();
 		root = parseHelper(src);
 	} catch (JSONError e) {
 		writef("Caught exception from input string:\n" ~ pointcpy ~ "\n");
@@ -723,6 +724,20 @@ unittest {
 	} catch (Exception e) {/*shazam! program flow should get here, it is a correct thing*/}
 	writef("Testing alternate base container and empty elements...\n");
 	assert("[,,]".readJSON().toString == "[null,null,null]");
+	jstr = 
+" {
+	\"realms\": [
+		{
+			\"type\": \"pve\",
+			\"queue\": false,
+			\"status\": true,
+			\"population\": \"medium\",
+			\"name\": \"Aerie Peak\",
+			\"slug\": \"aerie-peak\"
+		}
+	]
+}";
+	jstr.readJSON()["realms"].toJSONArray().length();
 }
 
 version(JSON_main) {
