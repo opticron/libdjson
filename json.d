@@ -478,8 +478,10 @@ class JSONBoolean:JSONType {
 	void parse(ref string source) {
 		if (source[0..4] == "true") {
 			source = stripl(source[4..$]);
+			set(true);
 		} else if (source[0..5] == "false") {
 			source = stripl(source[5..$]);
+			set(false);
 		} else throw new JSONError("Could not parse JSON boolean variable from: "~source);
 	}
 	mixin(convfuncs);
