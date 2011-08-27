@@ -53,7 +53,8 @@ version(Tango) {
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp;
+		import std.string:strip,stripr,stripl=stripLeft,split,replace,find=indexOf,cmp,icmp;
+		import std.ascii:isspace=isWhite;
 		real agToFloat(string data) {
 			return to!(real)(data);
 		}
@@ -66,9 +67,9 @@ version(Tango) {
 	} else {
 		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp;
 		import std.conv:agToULong=toUlong,agToFloat=toReal;
+		import std.ctype:isspace;
 	}
 	import std.stdio:writef;
-	import std.ctype:isspace;
 	import std.regexp:sub,RegExp;
 	//import std.utf:toUTF8;
 	string regrep(string input,string pattern,string delegate(string) translator) {
@@ -154,6 +155,8 @@ interface JSONType {
 	int opApply(int delegate(ref int,ref JSONType) dg);
 	/// Convenience function for iteration that apply to both AA and array type operations with ref value
 	int opApply(int delegate(ref JSONType) dg);
+	/// Allow "in" operator to work as expected for object types without an explicit cast
+	JSONType*opIn_r(string key);
 }
 // everything needs these for ease of use
 const string convfuncs = 
@@ -191,6 +194,8 @@ const string convfuncsAA =
 JSONType opIndex(string key) {throw new JSONError(typeof(this).stringof ~\" does not support string indexing, check your JSON structure.\");}
 /// Dummy function for types that don't implement string indexing.  Throws an exception.
 int opApply(int delegate(ref string,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
+/// Dummy function for types that don't implement string indexing (opIn_r).  Throws an exception.
+JSONType*opIn_r(string key) {throw new JSONError(typeof(this).stringof ~\" does not support opIn, check your JSON structure.\");}
 ";
 // neither arrays nor AAs need this
 const string convfuncsAAA = 
@@ -294,6 +299,10 @@ class JSONObject:JSONType {
 		// rip off the } and be done with it
 		source = stripl(source[1..$]);
 	}
+	/// Allow "in" operator to work as expected for object types without an explicit cast
+	JSONType*opIn_r(string key) {
+		return key in _children;
+	}
 	mixin(convfuncs);
 	mixin(convfuncsA);
 }
@@ -328,7 +337,7 @@ class JSONArray:JSONType {
 	int opApply(int delegate(ref int,ref JSONType) dg) {
 		int res;
 		int tmp;
-		foreach(ref key,ref child;_children) {
+		foreach(key,ref child;_children) {
 			tmp = key;
 			res = dg(tmp,child);
 			if (res) return res;
@@ -524,11 +533,11 @@ class JSONNumber:JSONType {
 	/// ...and its slightly less boring sibling.
 	this(real data) {_data = tostring(data);}
 	this(long data) {_data = tostring(data);}
-	this(int data) {_data = tostring(data);}
+	this(int data) {_data = tostring(cast(long)data);}
 	/// Allow setting of the hidden number.
 	void set(real data) {_data = tostring(data);}
 	void set(long data) {_data = tostring(data);}
-	void set(int data) {_data = tostring(data);}
+	void set(int data) {_data = tostring(cast(long)data);}
 	/// Allow the number to be retreived.
 	real get() {return agToFloat(_data);}
 	long getLong() {return agToULong(_data);}
@@ -702,26 +711,28 @@ unittest {
 	jstr = "{\"firstName\": \"John\",\"lastName\": \"Smith\",\"address\": {\"streetAddress\": \"21 2nd Street\",\"city\": \"New York\",\"state\": \"NY\",\"postalCode\": 10021},\"phoneNumbers\": [{ \"type\": \"home\", \"number\": \"212 555-1234\" },{ \"type\": \"fax\", \"number\": \"646 555-4567\" }],\"newSubscription\": false,\"companyName\": null }";
 	writef("Sample JSON string: " ~ jstr ~ "\n");
 	jstr = jstr.readJSON().toString;
+	auto tmp = jstr.readJSON();
 	writef("Parsed JSON string: " ~ jstr ~ "\n");
-	writef("Output using toPrettyString:\n"~jstr.readJSON().toPrettyString~"\nEnd pretty output\n");
+	writef("Output using toPrettyString:\n"~tmp.toPrettyString~"\nEnd pretty output\n");
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
-	assert(jstr.readJSON().toString == jstr);
+	assert(tmp.toString == jstr);
 	// ensure that pretty output still parses properly and doesn't mutate
-	jstr = jstr.readJSON().toPrettyString;
-	assert(jstr.readJSON().toPrettyString == jstr);
+	jstr = tmp.toPrettyString;
+	tmp = jstr.readJSON();
+	assert(tmp.toPrettyString == jstr);
 	writef("Unit Test libDJSON JSON access...\n");
-	writef("Got first name:" ~ jstr.readJSON()["firstName"].toJSONString.get ~ "\n");
-	writef("Got last name:" ~ jstr.readJSON()["lastName"].toJSONString.get ~ "\n");
+	writef("Got first name:" ~ tmp["firstName"].toJSONString.get ~ "\n");
+	writef("Got last name:" ~ tmp["lastName"].toJSONString.get ~ "\n");
 	writef("Unit Test libDJSON opApply interface...\n");
-	foreach(obj;jstr.readJSON()["phoneNumbers"]) {
+	foreach(obj;tmp["phoneNumbers"]) {
 		writef("Got " ~ obj["type"].toJSONString.get ~ " phone number:" ~ obj["number"].toJSONString.get ~ "\n");
 	}
-	foreach(string name,JSONType obj;jstr.readJSON()) {
+	foreach(string name,JSONType obj;tmp) {
 		writef("Got element name " ~ name ~ "\n");
 	}
 	writef("Unit Test libDJSON opIndex interface to ensure breakage where incorrectly used...\n");
 	try {
-		jstr.readJSON()[5];
+		tmp[5];
 		assert(false,"An exception should have been thrown on the line above.");
 	} catch (Exception e) {/*shazam! program flow should get here, it is a correct thing*/}
 	writef("Testing alternate base container and empty elements...\n");
@@ -739,7 +750,11 @@ unittest {
 		}
 	]
 }";
-	jstr.readJSON()["realms"].toJSONArray().length();
+	tmp = jstr.readJSON();
+	tmp["realms"].toJSONArray().length();
+	writef("Testing opIn_r functionality...\n");
+	assert("realms" in tmp);
+	assert(!("bob" in tmp));
 }
 
 version(JSON_main) {
