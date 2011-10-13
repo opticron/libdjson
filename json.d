@@ -152,7 +152,7 @@ interface JSONType {
 	/// Returns: The chosen index or a null reference if the index does not exist.
 	JSONType opIndex(int key);
 	/// Allow foreach over the object with integer key and ref value.
-	int opApply(int delegate(ref int,ref JSONType) dg);
+	int opApply(int delegate(ref ulong,ref JSONType) dg);
 	/// Convenience function for iteration that apply to both AA and array type operations with ref value
 	int opApply(int delegate(ref JSONType) dg);
 	/// Allow "in" operator to work as expected for object types without an explicit cast
@@ -185,7 +185,7 @@ const string convfuncsA =
 /// Dummy function for types that don't implement integer indexing.  Throws an exception.
 JSONType opIndex(int key) {throw new JSONError(typeof(this).stringof ~\" does not support integer indexing, check your JSON structure.\");}
 /// Dummy function for types that don't implement integer indexing.  Throws an exception.
-int opApply(int delegate(ref int,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
+int opApply(int delegate(ref ulong,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
 ";
 // only non-AAs need this
 const string convfuncsAA = 
@@ -224,7 +224,7 @@ class JSONObject:JSONType {
 	}
 	/// Allow the user to get the number of elements in this object
 	/// Returns: The number of child nodes contained within this JSONObject
-	int length() {return _children.length;}
+	ulong length() {return _children.length;}
 	/// Operator overload for foreach iteration through the object with values only and allow modification of the reference
 	int opApply(int delegate(ref JSONType) dg) {
 		int res;
@@ -323,7 +323,7 @@ class JSONArray:JSONType {
 	}
 	/// Allow the user to get the number of elements in this object
 	/// Returns: The number of child nodes contained within this JSONObject
-	int length() {return _children.length;}
+	ulong length() {return _children.length;}
 	/// Operator overload for foreach iteration through the array with values only and allow modification of the reference
 	int opApply(int delegate(ref JSONType) dg) {
 		int res;
@@ -334,9 +334,9 @@ class JSONArray:JSONType {
 		return 0;
 	}
 	/// Operator overload for foreach iteration through the array with key and value and allow modification of the reference
-	int opApply(int delegate(ref int,ref JSONType) dg) {
+	int opApply(int delegate(ref ulong,ref JSONType) dg) {
 		int res;
-		int tmp;
+		ulong tmp;
 		foreach(key,ref child;_children) {
 			tmp = key;
 			res = dg(tmp,child);
