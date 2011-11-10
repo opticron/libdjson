@@ -120,89 +120,56 @@ class JSONError : Exception {
 }
 
 /// This is the interface implemented by all classes that represent JSON objects.
-interface JSONType {
-	string toString();
-	string toPrettyString(string indent=null);
+abstract class JSONType {
+	abstract string toString();
+	abstract string toPrettyString(string indent=null);
 	/// The parse method of this interface should ALWAYS be destructive, removing things from the front of source as it parses.
-	void parse(ref string source);
-	/// Convenience function for casting to JSONObject.
-	/// Returns: The casted reference or null on a failed cast.
-	JSONObject toJSONObject();
-	/// Convenience function for casting to JSONArray.
-	/// Returns: The casted reference or null on a failed cast.
-	JSONArray toJSONArray();
-	/// Convenience function for casting to JSONString.
-	/// Returns: The casted reference or null on a failed cast.
-	JSONString toJSONString();
-	/// Convenience function for casting to JSONBoolean.
-	/// Returns: The casted reference or null on a failed cast.
-	JSONBoolean toJSONBoolean();
-	/// Convenience function for casting to JSONNumber.
-	/// Returns: The casted reference or null on a failed cast.
-	JSONNumber toJSONNumber();
-	/// Convenience function for casting to JSONNull.
-	/// Returns: The casted reference or null on a failed cast.
-	JSONNull toJSONNull();
+	abstract void parse(ref string source);
+	/// Convenience function for casting to JSONObject
+	/// Returns: The casted object or null if the cast fails
+	JSONObject toJSONObject(){return cast(JSONObject)this;}
+	/// Convenience function for casting to JSONArray
+	/// Returns: The casted object or null if the cast fails
+	JSONArray toJSONArray(){return cast(JSONArray)this;}
+	/// Convenience function for casting to JSONString
+	/// Returns: The casted object or null if the cast fails
+	JSONString toJSONString(){return cast(JSONString)this;}
+	/// Convenience function for casting to JSONBoolean
+	/// Returns: The casted object or null if the cast fails
+	JSONBoolean toJSONBoolean(){return cast(JSONBoolean)this;}
+	/// Convenience function for casting to JSONNumber
+	/// Returns: The casted object or null if the cast fails
+	JSONNumber toJSONNumber(){return cast(JSONNumber)this;}
+	/// Convenience function for casting to JSONNull
+	/// Returns: The casted object or null if the cast fails
+	JSONNull toJSONNull(){return cast(JSONNull)this;}
 	/// Associative array index function for objects describing associative array-like attributes.
 	/// Returns: The chosen index or a null reference if the index does not exist.
-	JSONType opIndex(string key);
+	JSONType opIndex(string key) {
+		throw new JSONError(typeof(this).stringof ~" does not support string indexing, check your JSON structure.");
+	}
 	/// Allow foreach over the object with string key and ref value.
-	int opApply(int delegate(ref string,ref JSONType) dg);
+	int opApply(int delegate(ref string,ref JSONType) dg) {
+		throw new JSONError(typeof(this).stringof ~" does not support string index foreach, check your JSON structure.");
+	}
 	/// Array index function for objects describing array-like attributes.
 	/// Returns: The chosen index or a null reference if the index does not exist.
-	JSONType opIndex(int key);
+	JSONType opIndex(int key) {
+		throw new JSONError(typeof(this).stringof ~" does not support integer indexing, check your JSON structure.");
+	}
 	/// Allow foreach over the object with integer key and ref value.
-	int opApply(int delegate(ref ulong,ref JSONType) dg);
+	int opApply(int delegate(ref ulong,ref JSONType) dg) {
+		throw new JSONError(typeof(this).stringof ~" does not support numeric index foreach, check your JSON structure.");
+	}
 	/// Convenience function for iteration that apply to both AA and array type operations with ref value
-	int opApply(int delegate(ref JSONType) dg);
+	int opApply(int delegate(ref JSONType) dg) {
+		throw new JSONError(typeof(this).stringof ~" does not support foreach, check your JSON structure.");
+	}
 	/// Allow "in" operator to work as expected for object types without an explicit cast
-	JSONType*opIn_r(string key);
+	JSONType*opIn_r(string key) {
+		throw new JSONError(typeof(this).stringof ~" does not support opIn, check your JSON structure.");
+	}
 }
-// everything needs these for ease of use
-const string convfuncs = 
-"
-/// Convenience function for casting to JSONObject
-/// Returns: The casted object or null if the cast fails
-JSONObject toJSONObject(){return cast(JSONObject)this;}
-/// Convenience function for casting to JSONArray
-/// Returns: The casted object or null if the cast fails
-JSONArray toJSONArray(){return cast(JSONArray)this;}
-/// Convenience function for casting to JSONString
-/// Returns: The casted object or null if the cast fails
-JSONString toJSONString(){return cast(JSONString)this;}
-/// Convenience function for casting to JSONBoolean
-/// Returns: The casted object or null if the cast fails
-JSONBoolean toJSONBoolean(){return cast(JSONBoolean)this;}
-/// Convenience function for casting to JSONNumber
-/// Returns: The casted object or null if the cast fails
-JSONNumber toJSONNumber(){return cast(JSONNumber)this;}
-/// Convenience function for casting to JSONNull
-/// Returns: The casted object or null if the cast fails
-JSONNull toJSONNull(){return cast(JSONNull)this;}";
-// only non-arrays need this
-const string convfuncsA = 
-"
-/// Dummy function for types that don't implement integer indexing.  Throws an exception.
-JSONType opIndex(int key) {throw new JSONError(typeof(this).stringof ~\" does not support integer indexing, check your JSON structure.\");}
-/// Dummy function for types that don't implement integer indexing.  Throws an exception.
-int opApply(int delegate(ref ulong,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support numeric index foreach, check your JSON structure.\");}
-";
-// only non-AAs need this
-const string convfuncsAA = 
-"
-/// Dummy function for types that don't implement string indexing.  Throws an exception.
-JSONType opIndex(string key) {throw new JSONError(typeof(this).stringof ~\" does not support string indexing, check your JSON structure.\");}
-/// Dummy function for types that don't implement string indexing.  Throws an exception.
-int opApply(int delegate(ref string,ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support string index foreach, check your JSON structure.\");}
-/// Dummy function for types that don't implement string indexing (opIn_r).  Throws an exception.
-JSONType*opIn_r(string key) {throw new JSONError(typeof(this).stringof ~\" does not support opIn, check your JSON structure.\");}
-";
-// neither arrays nor AAs need this
-const string convfuncsAAA = 
-"
-/// Dummy function for types that don't implement any type of indexing.  Throws an exception.
-int opApply(int delegate(ref JSONType) dg) {throw new JSONError(typeof(this).stringof ~\" does not support foreach, check your JSON structure.\");}
-";
 /**
  * JSONObject represents a single JSON object node and has methods for 
  * adding children.  All methods that make changes modify this
@@ -303,8 +270,6 @@ class JSONObject:JSONType {
 	JSONType*opIn_r(string key) {
 		return key in _children;
 	}
-	mixin(convfuncs);
-	mixin(convfuncsA);
 }
 
 /// JSONArray represents a single JSON array, capable of being heterogenous
@@ -392,8 +357,6 @@ class JSONArray:JSONType {
 		// rip off the ] and be done with it
 		source = stripl(source[1..$]);
 	}
-	mixin(convfuncs);
-	mixin(convfuncsAA);
 }
 
 /// JSONString represents a JSON string.  Internal representation is escaped for faster parsing and JSON generation.
@@ -452,10 +415,6 @@ class JSONString:JSONType {
 		// eat the " that is known to be there
 		source = stripl(source[sliceloc+1..$]);
 	}
-	mixin(convfuncs);
-	mixin(convfuncsA);
-	mixin(convfuncsAA);
-	mixin(convfuncsAAA);
 }
 
 /// JSONBoolean represents a JSON boolean value.
@@ -493,10 +452,6 @@ class JSONBoolean:JSONType {
 			set(false);
 		} else throw new JSONError("Could not parse JSON boolean variable from: "~source);
 	}
-	mixin(convfuncs);
-	mixin(convfuncsA);
-	mixin(convfuncsAA);
-	mixin(convfuncsAAA);
 }
 
 /// JSONNull represents a JSON null value.
@@ -520,10 +475,6 @@ class JSONNull:JSONType {
 	void parse(ref string source) in { assert(source[0..4] == "null"); } body {
 		source = stripl(source[4..$]);
 	}
-	mixin(convfuncs);
-	mixin(convfuncsA);
-	mixin(convfuncsAA);
-	mixin(convfuncsAAA);
 }
 
 /// JSONNumber represents any JSON numeric value.
@@ -582,10 +533,6 @@ class JSONNumber:JSONType {
 		_data = source[0..i];
 		source = stripl(source[i..$]);
 	}
-	mixin(convfuncs);
-	mixin(convfuncsA);
-	mixin(convfuncsAA);
-	mixin(convfuncsAAA);
 }
 
 private JSONType parseHelper(ref string source) {
