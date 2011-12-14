@@ -121,7 +121,7 @@ class JSONError : Exception {
 
 /// This is the interface implemented by all classes that represent JSON objects.
 abstract class JSONType {
-	abstract string toString();
+	override abstract string toString();
 	abstract string toPrettyString(string indent=null);
 	/// The parse method of this interface should ALWAYS be destructive, removing things from the front of source as it parses.
 	abstract void parse(ref string source);
@@ -186,14 +186,14 @@ class JSONObject:JSONType {
 	}
 	/// Operator overload for accessing values already in the AA.
 	/// Returns: The child node if it exists, otherwise null.
-	JSONType opIndex(string key) {
+	override JSONType opIndex(string key) {
 		return (key in _children)?_children[key]:null;
 	}
 	/// Allow the user to get the number of elements in this object
 	/// Returns: The number of child nodes contained within this JSONObject
 	ulong length() {return _children.length;}
 	/// Operator overload for foreach iteration through the object with values only and allow modification of the reference
-	int opApply(int delegate(ref JSONType) dg) {
+	override int opApply(int delegate(ref JSONType) dg) {
 		int res;
 		foreach(ref child;_children) {
 			res = dg(child);
@@ -202,7 +202,7 @@ class JSONObject:JSONType {
 		return 0;
 	}
 	/// Operator overload for foreach iteration through the object with key and value and allow modification of the reference
-	int opApply(int delegate(ref string,ref JSONType) dg) {
+	override int opApply(int delegate(ref string,ref JSONType) dg) {
 		int res;
 		foreach(key,ref child;_children) {
 			res = dg(key,child);
@@ -227,7 +227,7 @@ class JSONObject:JSONType {
 
 	/// A method to convert this JSONObject to a formatted, user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
-	string toPrettyString(string indent=null) {
+	override string toPrettyString(string indent=null) {
 		string ret;
 		ret ~= "{\n";
 		foreach (key,val;_children) {
@@ -240,7 +240,7 @@ class JSONObject:JSONType {
 	}
 
 	/// This function parses a JSONObject out of a string
-	void parse(ref string source) {
+	override void parse(ref string source) {
 		// make sure the first byte is {
 		if (source[0] != '{') throw new JSONError("Missing open brace '{' at start of JSONObject parse: "~source);
 		// rip off the leading {
@@ -267,7 +267,7 @@ class JSONObject:JSONType {
 		source = stripl(source[1..$]);
 	}
 	/// Allow "in" operator to work as expected for object types without an explicit cast
-	JSONType*opIn_r(string key) {
+	override JSONType*opIn_r(string key) {
 		return key in _children;
 	}
 }
@@ -283,14 +283,14 @@ class JSONArray:JSONType {
 	}
 	/// Operator overload to allow access of children
 	/// Returns: The child node if it exists, otherwise null.
-	JSONType opIndex(int key) {
+	override JSONType opIndex(int key) {
 		return _children[key];
 	}
 	/// Allow the user to get the number of elements in this object
 	/// Returns: The number of child nodes contained within this JSONObject
 	ulong length() {return _children.length;}
 	/// Operator overload for foreach iteration through the array with values only and allow modification of the reference
-	int opApply(int delegate(ref JSONType) dg) {
+	override int opApply(int delegate(ref JSONType) dg) {
 		int res;
 		foreach(ref child;_children) {
 			res = dg(child);
@@ -299,7 +299,7 @@ class JSONArray:JSONType {
 		return 0;
 	}
 	/// Operator overload for foreach iteration through the array with key and value and allow modification of the reference
-	int opApply(int delegate(ref ulong,ref JSONType) dg) {
+	override int opApply(int delegate(ref ulong,ref JSONType) dg) {
 		int res;
 		ulong tmp;
 		foreach(key,ref child;_children) {
@@ -326,7 +326,7 @@ class JSONArray:JSONType {
 
 	/// A method to convert this JSONArray to a formatted, user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
-	string toPrettyString(string indent=null) {
+	override string toPrettyString(string indent=null) {
 		string ret;
 		ret ~= "[\n";
 		foreach (val;_children) {
@@ -339,7 +339,7 @@ class JSONArray:JSONType {
 	}
 
 	/// This function parses a JSONArray out of a string
-	void parse(ref string source) {
+	override void parse(ref string source) {
 		if (source[0] != '[') throw new JSONError("Missing open brace '[' at start of JSONArray parse: "~source);
 		// rip off the leading [
 		source = stripl(source[1..$]);
@@ -379,12 +379,12 @@ class JSONString:JSONType {
 
 	/// A method to convert this JSONString to a formatted, user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
-	string toPrettyString(string indent=null) {
+	override string toPrettyString(string indent=null) {
 		return toString;
 	}
 
 	/// This function parses a JSONArray out of a string and eats characters as it goes, hence the ref string parameter.
-	void parse(ref string source) {
+	override void parse(ref string source) {
 		if (source[0] != '"') throw new JSONError("Missing open quote '\"' at start of JSONArray parse: "~source);
 		// rip off the leading [
 		source = source[1..$];
@@ -401,6 +401,7 @@ class JSONString:JSONType {
 				if (bscount%2 == 0) {
 					break;
 				}
+				goto default;
 			default:
 				bscount = 0;
 				continue;
@@ -438,12 +439,12 @@ class JSONBoolean:JSONType {
 
 	/// A method to convert this JSONBoolean to a formatted, user-readable format.
 	/// Returns: A JSON string representing this object and it's contents.
-	string toPrettyString(string indent=null) {
+	override string toPrettyString(string indent=null) {
 		return toString;
 	}
 
 	/// This function parses a JSONBoolean out of a string and eats characters as it goes, hence the ref string parameter.
-	void parse(ref string source) {
+	override void parse(ref string source) {
 		if (source[0..4] == "true") {
 			source = stripl(source[4..$]);
 			set(true);
@@ -467,12 +468,12 @@ class JSONNull:JSONType {
 
 	/// A method to convert this JSONNull to a formatted, user-readable format.
 	/// Returns: "null". Always. Forever.
-	string toPrettyString(string indent=null) {
+	override string toPrettyString(string indent=null) {
 		return toString;
 	}
 
 	/// This function parses a JSONNull out of a string.  Really, it just rips "null" off the beginning of the string and eats whitespace.
-	void parse(ref string source) in { assert(source[0..4] == "null"); } body {
+	override void parse(ref string source) in { assert(source[0..4] == "null"); } body {
 		source = stripl(source[4..$]);
 	}
 }
@@ -503,12 +504,12 @@ class JSONNumber:JSONType {
 
 	/// A method to convert this JSONNumber to a formatted, user-readable format.
 	/// Returns: A JSON string representing this number.
-	string toPrettyString(string indent=null) {
+	override string toPrettyString(string indent=null) {
 		return toString;
 	}
 
 	/// This function parses a JSONNumber out of a string and eats characters as it goes, hence the ref string parameter.
-	void parse(ref string source) {
+	override void parse(ref string source) {
 		// this parser sucks...
 		int i = 0;
 		// check for leading minus sign
