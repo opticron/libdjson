@@ -64,6 +64,7 @@ version(Tango) {
 		string tostring(real data) {
 			return to!(string)(data);
 		}
+		import std.traits : isSomeString, isNumeric;
 	} else {
 		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp;
 		import std.conv:agToULong=toUlong,agToFloat=toReal;
@@ -180,10 +181,56 @@ class JSONObject:JSONType {
 	/// Nothing to see here except for the boring constructor, move along.
 	this(){}
 	protected JSONType[string] _children;
-	/// Operator overload for setting keys in the AA.
-	void opIndexAssign(JSONType type,string key) {
-		_children[key] = type;
+	
+	
+	version(D_Version2) {
+		/// Operator overload for setting keys in the AA.
+		mixin("void opIndexAssign(T)(T type,string key) if(is(T : JSONType) && !is(T == typeof(null))) {
+			_children[key] = type;
+		}
+		/// ditto
+		void opIndexAssign(T)(T val, string key) if(isSomeString!T && !is(T == typeof(null))) {
+			_children[key] = new JSONString(cast(string)val);
+		}
+		/// ditto
+		void opIndexAssign(T)(T val, string key) if(isNumeric!T) {
+			_children[key] = new JSONNumber(val);
+		}
+		/// ditto
+		void opIndexAssign(T)(T val, string key) if(is(T == bool)) {
+			_children[key] = new JSONBoolean(val);
+		}
+		/// ditto
+		void opIndexAssign(T)(T val, string key) if(is(T == typeof(null))) {
+			_children[key] = new JSONNull();
+		}");
+	} else {
+		/// Operator overload for setting keys in the AA.
+		void opIndexAssign(JSONType type,string key) {
+			_children[key] = type;
+		}
+		/// ditto
+		void opIndexAssign(string val, string key) {
+			_children[key] = new JSONString(cast(string)val);
+		}
+		/// ditto
+		void opIndexAssign(bool val, string key) {
+			_children[key] = new JSONBoolean(val);
+		}
+		/// ditto
+		void opIndexAssign(long val, string key) {
+			_children[key] = new JSONNumber(val);
+		}
+		/// ditto
+		void opIndexAssign(real val, string key) {
+			_children[key] = new JSONNumber(val);
+		}
+		/// ditto
+		void opIndexAssign(int val, string key) {
+			_children[key] = new JSONNumber(val);
+		}
 	}
+	
 	/// Operator overload for accessing values already in the AA.
 	/// Returns: The child node if it exists, otherwise null.
 	override JSONType opIndex(string key) {
@@ -274,13 +321,63 @@ class JSONObject:JSONType {
 
 /// JSONArray represents a single JSON array, capable of being heterogenous
 class JSONArray:JSONType {
-	/// Nothing to see here, move along.
-	this(){}
 	protected JSONType[] _children;
-	/// Operator overload to allow addition of children
-	void opCatAssign(JSONType child) {
-		_children ~= child;
+	
+	version(D_Version2) {
+		mixin("
+		this(T...)(T args) {
+			foreach(arg; args) {
+				this ~= arg;
+			}
+		}
+		/// Operator overload to allow addition of children
+		void opCatAssign(T)(T child) if(is(T : JSONType)) {
+			_children ~= child;
+		}
+		/// ditto
+		void opCatAssign(T)(T val) if(isSomeString!T && !is(T == typeof(null))) {
+			_children ~= new JSONString(cast(string)val);
+		}
+		/// ditto
+		void opCatAssign(T)(T val) if(isNumeric!T) {
+			_children ~= new JSONNumber(val);
+		}
+		/// ditto
+		void opCatAssign(T)(T val) if(is(T == bool)) {
+			_children ~= new JSONBoolean(val);
+		}
+		/// ditto
+		void opCatAssign(T)(T val) if(is(T == typeof(null))) {
+			_children ~= new JSONNull();
+		}");
+	} else {
+		this(){}
+		/// Operator overload to allow addition of children
+		void opCatAssign(JSONType child) {
+			_children ~= child;
+		}
+		/// ditto
+		void opCatAssign(string val) {
+			_children ~= new JSONString(cast(string)val);
+		}
+		/// ditto
+		void opCatAssign(bool val) {
+			_children ~= new JSONBoolean(val);
+		}
+		/// ditto
+		void opCatAssign(long val) {
+			_children ~= new JSONNumber(val);
+		}
+		/// ditto
+		void opCatAssign(real val) {
+			_children ~= new JSONNumber(val);
+		}
+		/// ditto
+		void opCatAssign(int val) {
+			_children ~= new JSONNumber(val);
+		}
 	}
+	
 	/// Operator overload to allow access of children
 	/// Returns: The child node if it exists, otherwise null.
 	override JSONType opIndex(int key) {
@@ -703,6 +800,27 @@ unittest {
 	writef("Testing opIn_r functionality...\n");
 	assert("realms" in tmp);
 	assert(!("bob" in tmp));
+	
+	
+	writef("Testing autodetect type opAssign\n");
+	root = new JSONObject();
+	root["string"] = "str";
+	assert(root["string"].toJSONString().get() == "str");
+	root["int"] = 4;
+	assert(root["int"].toJSONNumber().getLong() == 4);
+	root["float"] = 4.5f;
+	assert(root["float"].toJSONNumber().get() == 4.5f);
+	version(D_Version2) {
+		root["array"] = new JSONArray("foosh", "bar", 1);
+		assert(root["array"].toJSONArray()[0].toJSONString().get == "foosh");
+	}
+	
+	writef("Testing autodetect type opCatAssign\n");
+	arr = new JSONArray();
+	arr ~= "foo";
+	assert(arr[0].toJSONString().get() == "foo");
+	arr ~= 5;
+	assert(arr[1].toJSONNumber().get() == 5);
 }
 
 version(JSON_main) {
