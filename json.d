@@ -65,20 +65,26 @@ version(Tango) {
 			return to!(string)(data);
 		}
 		import std.traits : isSomeString, isNumeric;
+		import std.regex;
+		string regrep(string input, string pattern, string delegate(string) translator) {
+			string tmpdel(Captures!(string,ulong) m) {
+				return translator(m.hit);
+			}
+			return std.regex.replace!(tmpdel)(input, regex(pattern, "g"));
+		}
 	} else {
 		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp;
 		import std.conv:agToULong=toUlong,agToFloat=toReal;
 		import std.ctype:isspace;
+		import std.regexp:sub,RegExp;
+		string regrep(string input,string pattern,string delegate(string) translator) {
+			string tmpdel(RegExp m) {
+				return translator(m.match(0));
+			}
+			return sub(input,pattern,&tmpdel,"g");
+		}
 	}
 	import std.stdio:writef;
-	import std.regexp:sub,RegExp;
-	//import std.utf:toUTF8;
-	string regrep(string input,string pattern,string delegate(string) translator) {
-		string tmpdel(RegExp m) {
-			return translator(m.match(0));
-		}
-		return sub(input,pattern,&tmpdel,"g");
-	}
 }
 
 /**
@@ -682,11 +688,19 @@ string JSONDecode(string src) {
         tempStr = replace(tempStr, "\\b", "\b");
 	// take care of hex character entities
 	// XXX regex is broken in tango 0.99.9 which means this doesn't work right when numbers enter the mix
-	tempStr = regrep(tempStr,"\\u[0-9a-fA-F]{4};",(string m) {
-		auto cnum = m[3..$-1];
-		dchar dnum = hex2dchar(cnum[1..$]);
-		return quickUTF8(dnum);
-	});
+	version(D_Version2) {
+		tempStr = regrep(tempStr,"\\\\u[0-9a-fA-F]{4};",(string m) {
+			auto cnum = m[3..$-1];
+			dchar dnum = hex2dchar(cnum[1..$]);
+			return quickUTF8(dnum);
+		});
+	} else {
+		tempStr = regrep(tempStr,"\\u[0-9a-fA-F]{4};",(string m) {
+			auto cnum = m[3..$-1];
+			dchar dnum = hex2dchar(cnum[1..$]);
+			return quickUTF8(dnum);
+		});
+	}
         return tempStr;
 }
 
