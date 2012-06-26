@@ -67,7 +67,7 @@ version(Tango) {
 		import std.traits : isSomeString, isNumeric;
 		import std.regex;
 		string regrep(string input, string pattern, string delegate(string) translator) {
-			string tmpdel(Captures!(string,ulong) m) {
+			string tmpdel(Captures!(string,size_t) m) {
 				return translator(m.hit);
 			}
 			return std.regex.replace!(tmpdel)(input, regex(pattern, "g"));
@@ -108,13 +108,8 @@ version(Tango) {
 JSONType readJSON(string src) {
 	string pointcpy = src;
 	JSONType root = null;
-	try {
-		src = src.stripl();
-		root = parseHelper(src);
-	} catch (JSONError e) {
-		writef("Caught exception from input string:\n" ~ pointcpy ~ "\n");
-		throw e;
-	}
+	src = src.stripl();
+	root = parseHelper(src);
 	return root;
 }
 
