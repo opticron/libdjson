@@ -53,7 +53,7 @@ version(Tango) {
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl=stripLeft,split,replace,find=indexOf,cmp,icmp;
+		import std.string:strip,stripr=stripRight,stripl=stripLeft,split,replace,find=indexOf,cmp,icmp;
 		import std.ascii:isspace=isWhite;
 		real agToFloat(string data) {
 			return to!(real)(data);
@@ -62,6 +62,9 @@ version(Tango) {
 			return to!(ulong)(data);
 		}
 		string tostring(real data) {
+			return to!(string)(data);
+		}
+		string tostring(long data) {
 			return to!(string)(data);
 		}
 		import std.traits : isSomeString, isNumeric;
