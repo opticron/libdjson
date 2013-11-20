@@ -3,6 +3,7 @@
 	"description": "A D1/D2/Tango/Phobos/Phobos2 compatible JSON parsing and generation library",
 	"homepage": "http://example.org",
 	"copyright": "Copyright 2013, Kinsey Moore",
+	"license": "BSL-1.0",
 	"authors": [
 		"Kinsey Moore"
 	]
