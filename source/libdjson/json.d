@@ -148,6 +148,44 @@ abstract class JSONType {
 	/// Convenience function for casting to JSONNull
 	/// Returns: The casted object or null if the cast fails
 	JSONNull toJSONNull(){return cast(JSONNull)this;}
+
+	/// Convenience function for getting a string
+	/// Returns: The string held within
+	/// Throws: JSONError if the object is not of the expected type
+	string getAsString() {
+		JSONString jstring = toJSONString();
+		if (!jstring) throw new JSONError("Attempted to retrieve string from a non-string object");
+		return jstring.get();
+	}
+	/// Convenience function for getting a boolean
+	/// Returns: The boolean held within
+	/// Throws: JSONError if the object is not of the expected type
+	bool getAsBoolean() {
+		JSONBoolean jbool = toJSONBoolean();
+		if (!jbool) throw new JSONError("Attempted to retrieve boolean from a non-boolean object");
+		return jbool.get();
+	}
+	/// Convenience function for getting a number
+	/// Returns: The number held within
+	/// Throws: JSONError if the object is not of the expected type
+	real getAsNumber() {
+		JSONNumber jnum = toJSONNumber();
+		if (!jnum) throw new JSONError("Attempted to retrieve number from a non-number object");
+		return jnum.get();
+	}
+	/// Convenience function for getting a number as a long
+	/// Returns: The number held within
+	/// Throws: JSONError if the object is not of the expected type
+	long getAsLong() {
+		JSONNumber jnum = toJSONNumber();
+		if (!jnum) throw new JSONError("Attempted to retrieve number from a non-number object");
+		return jnum.getLong();
+	}
+	/// Convenience function for getting a number as a real
+	/// Returns: The number held within
+	/// Throws: JSONError if the object is not of the expected type
+	real getAsReal() {return getAsNumber();}
+
 	/// Associative array index function for objects describing associative array-like attributes.
 	/// Returns: The chosen index or a null reference if the index does not exist.
 	JSONType opIndex(string key) {
@@ -778,11 +816,11 @@ unittest {
 	tmp = jstr.readJSON();
 	assert(tmp.toPrettyString == jstr);
 	writef("Unit Test libDJSON JSON access...\n");
-	writef("Got first name:" ~ tmp["firstName"].toJSONString.get ~ "\n");
-	writef("Got last name:" ~ tmp["lastName"].toJSONString.get ~ "\n");
+	writef("Got first name:" ~ tmp["firstName"].getAsString ~ "\n");
+	writef("Got last name:" ~ tmp["lastName"].getAsString ~ "\n");
 	writef("Unit Test libDJSON opApply interface...\n");
 	foreach(obj;tmp["phoneNumbers"]) {
-		writef("Got " ~ obj["type"].toJSONString.get ~ " phone number:" ~ obj["number"].toJSONString.get ~ "\n");
+		writef("Got " ~ obj["type"].getAsString ~ " phone number:" ~ obj["number"].getAsString ~ "\n");
 	}
 	foreach(string name,JSONType obj;tmp) {
 		writef("Got element name " ~ name ~ "\n");
@@ -817,22 +855,22 @@ unittest {
 	writef("Testing autodetect type opAssign\n");
 	root = new JSONObject();
 	root["string"] = "str";
-	assert(root["string"].toJSONString().get() == "str");
+	assert(root["string"].getAsString == "str");
 	root["int"] = 4;
-	assert(root["int"].toJSONNumber().getLong() == 4);
+	assert(root["int"].getAsLong == 4);
 	root["float"] = 4.5f;
-	assert(root["float"].toJSONNumber().get() == 4.5f);
+	assert(root["float"].getAsNumber == 4.5f);
 	version(D_Version2) {
 		root["array"] = new JSONArray("foosh", "bar", 1);
-		assert(root["array"].toJSONArray()[0].toJSONString().get == "foosh");
+		assert(root["array"].toJSONArray[0].getAsString == "foosh");
 	}
 	
 	writef("Testing autodetect type opCatAssign\n");
 	arr = new JSONArray();
 	arr ~= "foo";
-	assert(arr[0].toJSONString().get() == "foo");
+	assert(arr[0].getAsString == "foo");
 	arr ~= 5;
-	assert(arr[1].toJSONNumber().get() == 5);
+	assert(arr[1].getAsNumber == 5);
 }
 
 version(JSON_main) {
